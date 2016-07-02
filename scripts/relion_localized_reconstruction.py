@@ -19,6 +19,7 @@ import math
 import random
 import copy
 import time
+from itertools import izip
 
 from star import *
 from particle import * 
@@ -314,7 +315,6 @@ def main():
 
     symString = "C1"
     output = ""
-    count_distances = False
     subparticle_distances = []
     subparticle_vector_list = [] 
     input_cmm = ""
@@ -337,6 +337,9 @@ def main():
     nr_threads = 1
     nr_procs = 1
 
+    vectors_string = ''
+    distances_string = ''
+
     for o, a in opts:
         if o == "--randomize":
             randomize = True
@@ -345,15 +348,11 @@ def main():
         if o == "--sym":
             symString = str(a)
         if o == "--vector":
-            subparticle_vector = Vector3(None)
-            subparticle_vector.set_vector([float(x) for x in a.split(',')])
-            subparticle_vector_list.append(subparticle_vector)
+            vectors_string = a
         if o == "--align_subparticles":
             align_subparticles = True
         if o == "--length":
-            for y in a.split(','):
-                subparticle_distances.append(float(y))
-            count_distances = True
+            distances_string = a
         if o == "--top":
             top = radians(float(a))
         if o == "--side":
@@ -426,44 +425,29 @@ def main():
     all_subparticles = []
     all_subparticles_subtracted = []
 
-    # change distances to pixel units
-    subparticle_distances = [ x / angpix for x in subparticle_distances]
-
     if input_cmm:
-       subparticle_vector_list = vectors_from_cmm(input_cmm, angpix)
-       if len(subparticle_distances) != len(subparticle_vector_list) and count_distances:
-           print " "
-           print "Error: The number of distances doesn't match the number of vectors!"
-           sys.exit(0)
-       else:
-           if count_distances:
-               for i in range(len(subparticle_vector_list)):
-                   if subparticle_distances[i] < 0:
-                       subparticle_vector_list[i].set_distance(subparticle_vector_list[i].length())
-                   else:
-                       subparticle_vector_list[i].set_distance(subparticle_distances[i])
-                   if subparticle_vector_list[i].distance < 0:
-                       subparticle_vector_list[i].set_distance(0.0)               
-           else:
-               for i in range(len(subparticle_vector_list)):               
-                   subparticle_vector_list[i].set_distance(subparticle_vector_list[i].length())
-                   if subparticle_vector_list[i].distance < 0:
-                       subparticle_vector_list[i].set_distance(0.0)
+        subparticle_vector_list = vectors_from_cmm(input_cmm, angpix)
     else:
-        if not count_distances:
-            subparticle_vector.set_distance(subparticle_vector.length())
-            if subparticle_vector.distance < 0:
-                subparticle_vector.set_distance(0.0)
-        elif len(subparticle_distances) == 1:
-            subparticle_vector.set_distance(subparticle_distances[0])
-            if subparticle_vector.distance < 0:
-                subparticle_vector.set_distance(subparticle_vector.length())
-            if subparticle_vector.distance < 0:
-                subparticle_vector.set_distance(0.0)
-        else:
+        subparticle_vector_list = vectors_from_string(vectors_string)
+
+    if distances_string:
+        # Change distances from A to pixel units
+        subparticle_distances = [float(x) / angpix for x in distances_string.split(',')]
+
+        if len(subparticle_distances) != len(subparticle_vector_list):
             print " "
             print "Error: The number of distances doesn't match the number of vectors!"
-            sys.exit(0)
+            sys.exit(2)
+
+        for vector, distance in izip(subparticle_vector_list, subparticle_distances):
+            if distance > 0:
+                vector.set_distance(distance)
+            else:
+                vector.compute_distance()
+    else:
+        for vector in subparticle_vector_list:
+            vector.compute_distance()
+
 
     print "Creating subparticles using:"
 

@@ -18,11 +18,17 @@ class Vector3:
         else:
             self.v = v
 
+        # Initialize the vector distance to zero
+        self.distance = 0.0
+
     def set_vector(self, v):
         self.v = v
 
     def set_distance(self, d):
         self.distance = float(d)
+
+    def compute_distance(self):
+        self.set_distance(self.length())
 
     def print_vector(self):
         x, y, z = self.v
@@ -130,3 +136,18 @@ def vectors_from_cmm(input_cmm, angpix):
              continue
 
     return vector_list
+
+
+def vectors_from_string(input_str):
+    """ Function to parse vectors from an string.
+    Our (arbitrary) convention is:
+    x1,y1,z1; x2,y2,z2 ... etc
+    """
+    vectors = []
+
+    for vectorStr in input_str.split(';'):
+        v = Vector3(None)
+        v.set_vector([float(x) for x in vectorStr.split(',')])
+        vectors.append(v)
+
+    return vectors
