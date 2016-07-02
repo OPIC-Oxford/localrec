@@ -30,358 +30,300 @@ from os.path import basename
 from os.path import splitext
 from distutils import spawn
 from localized_reconstruction import *
-
-
-def usage():
-    print ""
-    print "Usage: relion_create_subparticles.py [parameters] input.star"
-    print "Calculates the coordinates and Euler angles for the subparticles defined by a vector and symmetry point group."
-    print ""
-    print "Parameters: "
-    print "--split_stacks                   Split particle stacks (needs to be done once)."
-    print "--masked_map file.mrc            Map with density that to be subtracted from particle images."
-    print "--create_star                    Create new STAR files for extracting sub-particles."
-    print "--extract_subparticles           Extract sub-particles from particle images."  
-    print "--angpix 1.35                    Pixel size (A)."
-    print "--sym I1                         Symmetry of the particle."
-    print "--particle_size 512              Size of the particle box (pixels)."
-    print "--subparticle_size 128           Size of the sub-particle box (pixels)."
-    print "--randomize                      Randomize the order of the symmetry matrices. Useful for preventing preferred orientations (default: not)."
-    print "--relax_symmetry                 Create one random subparticle for each particle (default: all symmetry related subparticles)."
-    print "--vector 0,0,1                   Vector defining the location of the subparticle."
-    print "--align_subparticles             Align subparticles to the standard orientation."
-    print "--length 100                     Alternative length of the vector. Use to adjust the sub-particle center (default: length of the given vector; A)."
-    print "--cmm vector.cmm                 A CMM file defining the location(s) of the subparticle(s) (use instead of --vector). Coordinates in Angstrom."
-    print "--unique 1                       Keep only unique subparticles within angular distance (useful to remove overlapping sub-particles on symmetry axis)."
-    print "--mindist 5                      Minimum distance between the subparticles in the image (all overlapping ones will be discarded; pixels)."
-    print "--side 25                        Keep only particles within specified angular distance from side views (all others will be discarded; degrees)."
-    print "--top 25                         Keep only particles within specified angular distance from top views (all others will be discarded; degrees)."
-    print "--output subparticles            Output root for results."
-    print "--j 8                            Number of threads."
-    print "--np 4                           Number of MPI procs."
-    print ""
-
-
-def error(*msgs):
-    usage()
-    print "Error: " + '\n'.join(msgs)
-    print " "
-    sys.exit(2)
+import argparse
 
 
 
-def main():
-    try:
-        opts, args = getopt.getopt(sys.argv[1:], '', ['sym=',
-                                                      'randomize',
-                                                      'relax_symmetry',
-                                                      'vector=',
-                                                      'align_subparticles',
-                                                      'cmm=',
-                                                      'length=',
-                                                      'output=',
-                                                      'create_star',
-                                                      'unique=',
-                                                      'mindist=',
-                                                      'top=',
-                                                      'side=',
-                                                      'particle_size=',
-                                                      'subparticle_size=',
-                                                      'masked_map=',
-                                                      'split_stacks',
-                                                      'extract_subparticles',
-                                                      'angpix=',
-                                                      'output=',
-                                                      'j=',
-                                                      'np=',
-                                                      ])
-    except getopt.GetoptError as e:
-        error(e)
+class LocalizedReconstruction():
+    def define_parser(self):
+        self.parser = argparse.ArgumentParser(
+            description="Calculates the coordinates and Euler angles for the "
+                        "subparticles defined by a vector and symmetry point group.")
+        required = self.parser.add_argument_group('required arguments')
+        add = self.parser.add_argument  # shortcut
+        addr = required.add_argument
 
-    if not (spawn.find_executable("bimg")):
-        error("Error: Bsoft not found.",
-              "Make sure Bsoft programs are in $PATH.")
+        add('input_star', help="Input star filename with particles.")
+        add('--split_stacks', action='store_true',
+            help="Split particle stacks (needs to be done once).")
+        add('--masked_map',
+            help="Map with density that to be subtracted from particle images.")
+        add('--create_star', action='store_true',
+            help="Create new STAR files for extracting sub-particles.")
+        add('--extract_subparticles', action='store_true',
+            help="Extract sub-particles from particle images.")
+        addr('--angpix', type=float, help="Pixel size (A).", required=True)
+        add('--sym', help="Symmetry of the particle.")
+        addr('--particle_size', type=int, required=True,
+            help="Size of the particle box (pixels).")
+        addr('--subparticle_size', type=int, required=True,
+            help="Size of the sub-particle box (pixels).")
+        add('--randomize', action='store_true',
+            help="Randomize the order of the symmetry matrices. \n"
+                 "Useful for preventing preferred orientations (default: not).")
+        add('--relax_symmetry', action='store_true',
+            help="Create one random subparticle for each particle "
+                 "(default: all symmetry related subparticles).")
+        add('--vector', help="Vector defining the location of the subparticle.")
+        add('--align_subparticles', action='store_true',
+            help="Align subparticles to the standard orientation.")
+        add('--length',
+            help="Alternative length of the vector. Use to adjust the "
+                 "sub-particle center (default: length of the given "
+                 "vector; A).")
+        add('--cmm',
+            help="A CMM file defining the location(s) of the subparticle(s) "
+                 "(use instead of --vector). Coordinates in Angstrom.")
+        add('--unique', type=float, default=1,
+            help="Keep only unique subparticles within angular distance "
+                 "(useful to remove overlapping sub-particles on symmetry axis).")
+        add('--mindist', type=float, default=5,
+            help="Minimum distance between the subparticles in the image "
+                 "(all overlapping ones will be discarded; pixels).")
+        add('--side', type=float, default=25,
+            help="Keep only particles within specified angular distance from side "
+                 "views (all others will be discarded; degrees).")
+        add('--top', type=float, default=25,
+            help="Keep only particles within specified angular distance from top "
+                 "views (all others will be discarded; degrees).")
+        add('--output', default='subparticles',
+            help="Output root for results.")
+        add('--j', type=int, default=8, help="Number of threads.")
+        add('--np', type=int, default=4, help="Number of MPI procs.")
 
-    if not (spawn.find_executable("relion_refine")):
-        error("Error: Relion not found.",
-              "Make sure Relion programs are in $PATH.")
+    def usage(self):
+        self.parser.print_help()
 
-    symString = "C1"
-    output = ""
-    subparticle_distances = []
-    subparticle_vector_list = []
-    input_cmm = ""
-    part_image_size = -1
-    relax_symmetry = False
-    align_subparticles = False
-    randomize = False
-    star = False
-    unique = -1
-    mindist = -1
-    minanglediff = -1
-    side = -1
-    top = -1
-    masked_map = ""
-    subtract_masked_map = False
-    split_stacks = False
-    extract_subparticles = False
-    angpix = -1
-    output_dir = ""
-    nr_threads = 1
-    nr_procs = 1
+    def error(self, *msgs):
+        self.usage()
+        print "Error: " + '\n'.join(msgs)
+        print " "
+        sys.exit(2)
 
-    vectors_string = ''
-    distances_string = ''
+    def main(self):
+        self.define_parser()
+        args = self.parser.parse_args()
 
-    for o, a in opts:
-        if o == "--randomize":
-            randomize = True
-        if o == "--relax_symmetry":
-            relax_symmetry = True
-        if o == "--sym":
-            symString = str(a)
-        if o == "--vector":
-            vectors_string = a
-        if o == "--align_subparticles":
-            align_subparticles = True
-        if o == "--length":
-            distances_string = a
-        if o == "--top":
-            top = radians(float(a))
-        if o == "--side":
-            side = radians(float(a))
-        if o == "--mindist":
-            mindist = float(a)
-        if o == "--unique":
-            unique = float(a)
-        if o == "--cmm":
-            input_cmm = a
-        if o == "--create_star":
-            star = True
-        if o == "--particle_size":
-            part_image_size = int(a)
-        if o == "--subparticle_size":
-            subpart_image_size = int(a)
-        if o == "--masked_map":
-            masked_map = str(a)
-            subtract_masked_map = True
-        if o == "--split_stacks":
-            split_stacks = True
-        if o == "--extract_subparticles":
-            extract_subparticles = True
-        if o == "--angpix":
-            angpix = float(a)
-        if o == "--output":
-            output = str(a)
-        if o == "--j":
-            nr_threads = int(a)
-        if o == "--np":
-            nr_procs = int(a)
+        if not (spawn.find_executable("bimg")):
+            self.error("Error: Bsoft not found.",
+                  "Make sure Bsoft programs are in $PATH.")
 
-    if len(args) == 0:
-        error("Error: No input file given.")
+        if not (spawn.find_executable("relion_refine")):
+            self.error("Error: Relion not found.",
+                  "Make sure Relion programs are in $PATH.")
 
-    input_star_filename = str(args[0])
+        if len(sys.argv) == 1:
+            self.error("Error: No input file given.")
 
-    if not os.path.exists(input_star_filename):
-        error("Error: Input file '%s' not found." % input_star_filename)
+        input_star_filename = args.input_star
 
-    if part_image_size < 0:
-        error("Error: Particle image size not given.")
+        if not os.path.exists(input_star_filename):
+            self.error("Error: Input file '%s' not found." % input_star_filename)
 
-    if subpart_image_size < 0:
-        error("Error: Sub-particle image size not given.")
+        angpix = args.angpix
+        part_image_size = args.particle_size
+        subpart_image_size = args.subparticle_size
+        output = args.output
+        subtract_masked_map = args.masked_map is not None
+        side = args.side
+        top = args.top
+        unique = args.unique
+        mindist = args.mindist
 
-    if angpix < 0:
-        error("Error: Pixel size not given.")
+        all_subparticles = []
+        all_subparticles_subtracted = []
 
-    matrices = []
-    particles = []
-    parameters = []
-    subparticles = []
-    all_subparticles = []
-    all_subparticles_subtracted = []
-
-    if input_cmm:
-        subparticle_vector_list = vectors_from_cmm(input_cmm, angpix)
-    else:
-        subparticle_vector_list = vectors_from_string(vectors_string)
-
-    if distances_string:
-        # Change distances from A to pixel units
-        subparticle_distances = [float(x) / angpix for x in distances_string.split(',')]
-
-        if len(subparticle_distances) != len(subparticle_vector_list):
-            error("Error: The number of distances doesn't match the number of vectors!")
-
-        for vector, distance in izip(subparticle_vector_list, subparticle_distances):
-            if distance > 0:
-                vector.set_distance(distance)
-            else:
-                vector.compute_distance()
-    else:
-        for vector in subparticle_vector_list:
-            vector.compute_distance()
-
-
-    print "Creating subparticles using:"
-
-    for subparticle_vector in subparticle_vector_list:
-        print "Vector: ",
-        subparticle_vector.print_vector()
-        print ""
-        print "Length: %.2f pixels" % subparticle_vector.distance
-    print ""
-
-    path = output + "/"
-    output_subt = output + "_subtracted"
-
-    run_command("mkdir -p " + output, "/dev/null")
-
-    def create_stack(suffix, maskedFile, extraArgs=''):
-        print "Creating and splitting the particle stack..."
-        if suffix:
-            print " Creating a stack from which the projections of the masked particle have been subtracted..."
+        if args.cmm:
+            subparticle_vector_list = vectors_from_cmm(args.cmm, angpix)
         else:
-            print " Creating a normal stack from which nothing is subtracted..."
+            subparticle_vector_list = vectors_from_string(args.vector)
 
-        outputParticles = "%sparticles%s" % (path, suffix)
-        run_command("relion_project --i %s --o %s --ang %s --subtract_exp --angpix %s %s"
-                    % (maskedFile, outputParticles, input_star_filename, angpix, extraArgs))
+        if args.length:
+            # Change distances from A to pixel units
+            subparticle_distances = [float(x) / angpix for x in args.length.split(',')]
 
-        run_command("bsplit -digits 6 -first 1 %s.mrcs:mrc %s.mrc"
-                    % (outputParticles, outputParticles))
+            if len(subparticle_distances) != len(subparticle_vector_list):
+                self.error("Error: The number of distances doesn't match the number of vectors!")
 
-        print "Finished splitting the particle stack!"
+            for vector, distance in izip(subparticle_vector_list, subparticle_distances):
+                if distance > 0:
+                    vector.set_distance(distance)
+                else:
+                    vector.compute_distance()
+        else:
+            for vector in subparticle_vector_list:
+                vector.compute_distance()
+
+
+        print "Creating subparticles using:"
+
+        for subparticle_vector in subparticle_vector_list:
+            print "Vector: ",
+            subparticle_vector.print_vector()
+            print ""
+            print "Length: %.2f pixels" % subparticle_vector.distance
+        print ""
+
+        path = output + "/"
+        output_subt = output + "_subtracted"
+
+        run_command("mkdir -p " + output, "/dev/null")
+
+        def create_stack(suffix, maskedFile, extraArgs=''):
+            print "Creating and splitting the particle stack..."
+            if suffix:
+                print " Creating a stack from which the projections of the masked particle have been subtracted..."
+            else:
+                print " Creating a normal stack from which nothing is subtracted..."
+
+            outputParticles = "%sparticles%s" % (path, suffix)
+            run_command("relion_project --i %s --o %s --ang %s --subtract_exp --angpix %s %s"
+                        % (maskedFile, outputParticles, input_star_filename, angpix, extraArgs))
+
+            run_command("bsplit -digits 6 -first 1 %s.mrcs:mrc %s.mrc"
+                        % (outputParticles, outputParticles))
+
+            print "Finished splitting the particle stack!"
+            print " "
+
+        if args.split_stacks:
+            maskedFile = 'dummy_mask.mrc'
+            run_command("beditimg -create %s,%s,%s -fill 0 %s"
+                        % (part_image_size, part_image_size, part_image_size, maskedFile))
+            create_stack('', maskedFile)
+            run_command("rm -f %s" % maskedFile)
+
+        if subtract_masked_map:
+            create_stack('_subtracted', args.masked_map, '--ctf')
+
+
+        print "Creating subparticles..."
+
+        # setup toolbar
+        toolbar_width = 70
+        sys.stdout.write("%s[oo]" % (" " * toolbar_width))
+        sys.stdout.flush()
+        sys.stdout.write("\b" * (toolbar_width))
+        c = 0
+        timer = 0.01
+
+        input_star = open(path + "particles.star", "r")
+        particles, parameters = read_star(input_star)
+        input_star.close()
+
+        relion_create_symmetry_ops_file(args.sym, "relion_symops.tmp")
+        symmetry_matrices = matrix_from_symmetry_ops_file("relion_symops.tmp")
+        run_command("rm relion_symops.tmp", "")
+
+        nparticle = 0
+
+        # Define some
+
+        for particle in particles:
+            subparticles = create_subparticles(particle, symmetry_matrices,
+                                               subparticle_vector_list,
+                                               part_image_size,
+                                               args.relax_symmetry,
+                                               args.randomize,
+                                               "subparticles", unique,
+                                               len(all_subparticles),
+                                               args.align_subparticles)
+
+            # to preserve numbering, ALL sub-particles are written to STAR files before filtering
+            index = particle.rlnImageName[0:6]
+            star_filename = splitext(particle.rlnImageName[7:])[0] + "_" + index + ".star"
+
+            for subparticle in subparticles:
+                particle_filename = splitext(particle.rlnImageName[7:])[0] + "_" + index + ".mrc"
+                subparticle.setrlnMicrographName(particle_filename)
+                subparticle_filename = splitext(particle.rlnImageName[7:])[0] + "_" + index + "_subparticles.mrcs"
+                subparticle.setrlnImageName(subparticle.rlnImageName[0:7] + subparticle_filename)
+
+            if subtract_masked_map:
+                subparticles_subtracted = []
+                star_filename_subtracted = splitext(particle.rlnImageName[7:])[0] + "_subtracted_" + index + ".star"
+                for subparticle in subparticles:
+                    subparticle_new = copy.deepcopy(subparticle)
+                    subparticle_new.rlnImageName = subparticle_new.rlnImageName[:-24] + "subtracted" + subparticle_new.rlnImageName[-25:]
+                    subparticles_subtracted.append(subparticle_new)
+
+            if args.create_star:
+                create_star(subparticles, star_filename)
+                if subtract_masked_map:
+                    create_star(subparticles_subtracted, star_filename_subtracted)
+
+            if side > 0:
+                subparticles = filter_subparticles_side(subparticles, side)
+
+            if top > 0:
+                subparticles = filter_subparticles_top(subparticles, top)
+
+            if mindist > 0:
+                subparticles = filter_subparticles_mindist(subparticles, mindist)
+
+            if (side > 0 or top > 0 or mindist > 0) and subtract_masked_map:
+                subparticles_subtracted = []
+                for subparticle in subparticles:
+                    subparticle_new = copy.deepcopy(subparticle)
+                    subparticle_new.rlnImageName = subparticle_new.rlnImageName[:-24] + "subtracted" + subparticle_new.rlnImageName[-25:]
+                    subparticles_subtracted.append(subparticle_new)
+
+            all_subparticles.extend(subparticles)
+            if subtract_masked_map:
+                all_subparticles_subtracted.extend(subparticles_subtracted)
+
+            if nparticle == int(len(particles) * timer):
+                sys.stdout.write("\b" * (c + 8))
+                sys.stdout.write("." * c)
+                sys.stdout.write("~~(,_,\">")
+                sys.stdout.flush()
+                timer = timer + 0.01
+                c = c + 1
+
+            nparticle = nparticle + 1
+        sys.stdout.write("\n")
+
+        print "Finished creating the subparticles!"
         print " "
 
-    if split_stacks:
-        maskedFile = 'dummy_mask.mrc'
-        run_command("beditimg -create %s,%s,%s -fill 0 %s"
-                    % (part_image_size, part_image_size, part_image_size, maskedFile))
-        create_stack('', maskedFile)
-        run_command("rm -f %s" % maskedFile)
+        if args.extract_subparticles:
+            print "Extracting the subparticles..."
+            if args.np == 1:
+                cmd = 'relion_preprocess '
+            else:
+                cmd = 'mpirun -np %s relion_preprocess_mpi ' % args.np
 
-    if subtract_masked_map:
-        create_stack('_subtracted', masked_map, '--ctf')
+            suffix = '_substracted' if subtract_masked_map else ''
 
+            def run_extract(suffix=''):
+                args = '--extract --o subparticles --extract_size %s --coord_files "%sparticles%s_??????.star"' % (subpart_image_size, path, suffix)
+                run_command(cmd + args)
+                run_command('mv subparticles.star %s%s_preprocess.star' % (output, suffix))
 
-    print "Creating subparticles..."
+            run_extract() # Run extraction without substracted density
 
-    # setup toolbar   
-    toolbar_width = 70
-    sys.stdout.write("%s[oo]" % (" " * toolbar_width))
-    sys.stdout.flush()
-    sys.stdout.write("\b" * (toolbar_width))
-    c = 0
-    timer = 0.01
-
-    input_star = open(path + "particles.star", "r")
-    particles, parameters = read_star(input_star)
-    input_star.close()
-
-    relion_create_symmetry_ops_file(symString, "relion_symops.tmp")
-    symmetry_matrices = matrix_from_symmetry_ops_file("relion_symops.tmp")
-    run_command("rm relion_symops.tmp", "")
-
-    nparticle = 0
-    for particle in particles:
-        subparticles = create_subparticles(particle, symmetry_matrices, subparticle_vector_list, part_image_size, relax_symmetry, randomize, "subparticles", unique, len(all_subparticles), align_subparticles)
-
-        # to preserve numbering, ALL sub-particles are written to STAR files before filtering
-        index = particle.rlnImageName[0:6]
-        star_filename = splitext(particle.rlnImageName[7:])[0] + "_" + index + ".star"
-
-        for subparticle in subparticles:
-            particle_filename = splitext(particle.rlnImageName[7:])[0] + "_" + index + ".mrc"
-            subparticle.setrlnMicrographName(particle_filename)
-            subparticle_filename = splitext(particle.rlnImageName[7:])[0] + "_" + index + "_subparticles.mrcs"
-            subparticle.setrlnImageName(subparticle.rlnImageName[0:7] + subparticle_filename)
-
-        if subtract_masked_map:
-            subparticles_subtracted = []
-            star_filename_subtracted = splitext(particle.rlnImageName[7:])[0] + "_subtracted_" + index + ".star"
-            for subparticle in subparticles:
-                subparticle_new = copy.deepcopy(subparticle)
-                subparticle_new.rlnImageName = subparticle_new.rlnImageName[:-24] + "subtracted" + subparticle_new.rlnImageName[-25:]
-                subparticles_subtracted.append(subparticle_new)
-
-        if star:
-            create_star(subparticles, star_filename)
             if subtract_masked_map:
-                create_star(subparticles_subtracted, star_filename_subtracted)
+                run_extract('_subtracted')
 
-        if side > 0:
-            subparticles = filter_subparticles_side(subparticles, side)
-        if top > 0:
-            subparticles = filter_subparticles_top(subparticles, top)
-        if mindist > 0:
-            subparticles = filter_subparticles_mindist(subparticles, mindist)
+            run_command("mv Particles/%s/* %s/" % (output, output))
+            run_command("rmdir Particles/" + output)
+            print "Finished extracting the sub-particles!\n"
 
-        if (side > 0 or top > 0 or mindist > 0) and subtract_masked_map:
-            subparticles_subtracted = []
-            for subparticle in subparticles:
-                subparticle_new = copy.deepcopy(subparticle)
-                subparticle_new.rlnImageName = subparticle_new.rlnImageName[:-24] + "subtracted" + subparticle_new.rlnImageName[-25:]
-                subparticles_subtracted.append(subparticle_new)
 
-        all_subparticles.extend(subparticles)
-        if subtract_masked_map:
-            all_subparticles_subtracted.extend(subparticles_subtracted)
-
-        if nparticle == int(len(particles) * timer):
-            sys.stdout.write("\b" * (c + 8))
-            sys.stdout.write("." * c)
-            sys.stdout.write("~~(,_,\">")
-            sys.stdout.flush()
-            timer = timer + 0.01
-            c = c + 1
-
-        nparticle = nparticle + 1
-    sys.stdout.write("\n")
-
-    print "Finished creating the subparticles!"
-    print " "
-
-    if extract_subparticles:
-        print "Extracting the subparticles..."
-        if nr_procs == 1:
-            cmd = 'relion_preprocess '
-        else:
-            cmd = 'mpirun -np %s relion_preprocess_mpi ' % nr_procs
-
-        suffix = '_substracted' if subtract_masked_map else ''
-
-        def run_extract(suffix=''):
-            args = '--extract --o subparticles --extract_size %s --coord_files "%sparticles%s_??????.star"' % (subpart_image_size, path, suffix)
-            run_command(cmd + args)
-            run_command('mv subparticles.star %s%s_preprocess.star' % (output, suffix))
-
-        run_extract() # Run extraction without substracted density
+        write_star(all_subparticles, parameters, output + ".star")
 
         if subtract_masked_map:
-            run_extract('_subtracted')
+            write_star(all_subparticles_subtracted, parameters, output_subt + ".star")
 
-        run_command("mv Particles/%s/* %s/" % (output, output))
-        run_command("rmdir Particles/" + output)
-        print "Finished extracting the sub-particles!\n"
+        print "The output files have been written!"
+        print "   Parameters for subparticles: *** " + output + ".star **"
 
+        if subtract_masked_map:
+            print "   Parameters for subparticles after subtractions: *** " + output_subt + ".star ***"
 
-    write_star(all_subparticles, parameters, output + ".star")
+        print " "
 
-    if subtract_masked_map:
-        write_star(all_subparticles_subtracted, parameters, output_subt + ".star")
-
-    print "The output files have been written!"
-    print "   Parameters for subparticles: *** " + output + ".star **"
-
-    if subtract_masked_map:
-        print "   Parameters for subparticles after subtractions: *** " + output_subt + ".star ***"
-
-    print " "
-
-    sys.exit(0)
 
 if __name__ == "__main__":    
-    main()
+    LocalizedReconstruction().main()
 
