@@ -231,26 +231,23 @@ class LocalizedReconstruction():
 
             # to preserve numbering, ALL sub-particles are written to STAR files before filtering
             index = particle.rlnImageName[0:6]
-            star_filename = splitext(particle.rlnImageName[7:])[0] + "_" + index + ".star"
+            particle_prefix = splitext(particle.rlnImageName[7:])[0]
 
             for subparticle in subparticles:
-                particle_filename = splitext(particle.rlnImageName[7:])[0] + "_" + index + ".mrc"
+                particle_filename = particle_prefix + "_" + index + ".mrc"
                 subparticle.setrlnMicrographName(particle_filename)
-                subparticle_filename = splitext(particle.rlnImageName[7:])[0] + "_" + index + "_subparticles.mrcs"
+                subparticle_filename = particle_prefix + "_" + index + "_subparticles.mrcs"
                 subparticle.setrlnImageName(subparticle.rlnImageName[0:7] + subparticle_filename)
 
             if subtract_masked_map:
-                subparticles_subtracted = []
-                star_filename_subtracted = splitext(particle.rlnImageName[7:])[0] + "_subtracted_" + index + ".star"
-                for subparticle in subparticles:
-                    subparticle_new = copy.deepcopy(subparticle)
-                    subparticle_new.rlnImageName = subparticle_new.rlnImageName[:-24] + "subtracted" + subparticle_new.rlnImageName[-25:]
-                    subparticles_subtracted.append(subparticle_new)
+                subparticles_subtracted = clone_subtracted_subparticles(subparticles)
 
             if args.create_star:
-                create_star(subparticles, star_filename)
+                create_star(subparticles,
+                            "%s_%s.star" % (particle_prefix, index))
                 if subtract_masked_map:
-                    create_star(subparticles_subtracted, star_filename_subtracted)
+                    create_star(subparticles_subtracted,
+                                "%s_subtracted_%s.star" % (particle_prefix, index))
 
             if side > 0:
                 subparticles = filter_subparticles_side(subparticles, side)
@@ -262,11 +259,7 @@ class LocalizedReconstruction():
                 subparticles = filter_subparticles_mindist(subparticles, mindist)
 
             if (side > 0 or top > 0 or mindist > 0) and subtract_masked_map:
-                subparticles_subtracted = []
-                for subparticle in subparticles:
-                    subparticle_new = copy.deepcopy(subparticle)
-                    subparticle_new.rlnImageName = subparticle_new.rlnImageName[:-24] + "subtracted" + subparticle_new.rlnImageName[-25:]
-                    subparticles_subtracted.append(subparticle_new)
+                subparticles_subtracted = clone_subtracted_subparticles(subparticles)
 
             all_subparticles.extend(subparticles)
             if subtract_masked_map:

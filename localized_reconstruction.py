@@ -218,6 +218,17 @@ def create_subparticles(particle, symmetry_matrices, subparticle_vector_list, pa
     return subparticles
 
 
+def clone_subtracted_subparticles(subparticles):
+    subparticles_subtracted = []
+
+    for sp in subparticles:
+        sp_new = copy.deepcopy(sp)
+        sp_new.rlnImageName = sp_new.rlnImageName[:-24] + "subtracted" + sp_new.rlnImageName[-25:]
+        subparticles_subtracted.append(sp_new)
+
+    return subparticles_subtracted
+
+
 def create_star(subparticles, star_filename):
     '''function to create a Relion style STAR file for extracting (using relion_preprocess) all the subparticles for a given particle'''
 
