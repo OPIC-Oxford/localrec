@@ -262,6 +262,7 @@ def create_star(subparticles, star_filename):
 def run_command(command, output=""):
     if not output:
         print "+++ " + command
+        sys.stdout.flush()
         os.system(command)
     else:
         os.system(command + " > " + output)
