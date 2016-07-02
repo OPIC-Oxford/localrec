@@ -581,32 +581,39 @@ def main():
     if extract_subparticles:
         print "Extracting the subparticles..."
         if nr_procs == 1:
-            run_command('relion_preprocess --extract --o ' + 'subparticles' + ' --extract_size ' + str(subpart_image_size) + ' --coord_files "' + path + 'particles' + '_??????.star"')
+            cmd = 'relion_preprocess '
         else:
-            run_command('mpirun -np ' + str(nr_procs) + ' relion_preprocess_mpi --extract --o ' + 'subparticles' + ' --extract_size ' + str(subpart_image_size) + ' --coord_files "' + path + 'particles' + '_??????.star"')
-        run_command("mv subparticles.star " + output + "_preprocess.star", "")
+            cmd = 'mpirun -np %s relion_preprocess_mpi ' % nr_procs
+
+        suffix = '_substracted' if subtract_masked_map else ''
+
+        def run_extract(suffix=''):
+            args = '--extract --o subparticles --extract_size %s --coord_files "%sparticles%s_??????.star"' % (subpart_image_size, path, suffix)
+            run_command(cmd + args)
+            run_command('mv subparticles.star %s%s_preprocess.star' % (output, suffix))
+
+        run_extract() # Run extraction without substracted density
 
         if subtract_masked_map:
-            if nr_procs == 1:
-                run_command('relion_preprocess --extract --o ' + 'subparticles' + ' --extract_size ' + str(subpart_image_size) + ' --coord_files "' + path + 'particles_subtracted' + '_??????.star"')
-            else:
-                run_command('mpirun -np ' + str(nr_procs) + ' relion_preprocess_mpi --extract --o ' + 'subparticles' + ' --extract_size ' + str(subpart_image_size) + ' --coord_files "' + path + 'particles_subtracted' + '_??????.star"') 
-            run_command("mv subparticles.star " + output_subt + "_preprocess.star", "")
+            run_extract('_subtracted')
 
-        run_command("mv Particles/" + output + "/* " + output + "/")
+        run_command("mv Particles/%s/* %s/" % (output, output))
         run_command("rmdir Particles/" + output)
-        print "Finished extracting the sub-particles!"
-        print " " 
+        print "Finished extracting the sub-particles!\n"
+
 
     write_star(all_subparticles, parameters, output + ".star")
+
     if subtract_masked_map:
         write_star(all_subparticles_subtracted, parameters, output_subt + ".star")
     
     print "The output files have been written!"
     print "   Parameters for subparticles: *** " + output + ".star **"
+
     if subtract_masked_map:
         print "   Parameters for subparticles after subtractions: *** " + output_subt + ".star ***"
-    print " " 
+
+    print " "
 
     sys.exit(0)
 
