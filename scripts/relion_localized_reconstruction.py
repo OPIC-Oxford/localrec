@@ -61,6 +61,13 @@ def usage():
     print ""
 
 
+def error(*msgs):
+    usage()
+    print "Error: " + '\n'.join(msgs)
+    print " "
+    sys.exit(2)
+
+
 def within_mindist(p1, p2, mindist):
     """function that calculates whether two particles are closer to each other than the given distance in the projection"""
 
@@ -270,7 +277,7 @@ def run_command(command, output=""):
 
 def main():
     try:
-        opts, args = getopt.getopt(sys.argv[1:], '', ['sym=', 
+        opts, args = getopt.getopt(sys.argv[1:], '', ['sym=',
                                                       'randomize',
                                                       'relax_symmetry',
                                                       'vector=',
@@ -292,31 +299,22 @@ def main():
                                                       'output=',
                                                       'j=',
                                                       'np=',
-                                                     ])
+                                                      ])
     except getopt.GetoptError as e:
-        usage()
-        print "Error: " + str(e)
-        print " "
-        sys.exit(2)
+        error(e)
 
     if not (spawn.find_executable("bimg")):
-        usage()
-        print "Error: Bsoft not found."
-        print "Make sure Bsoft programs are in $PATH."
-        print " "
-        sys.exit(2)
+        error("Error: Bsoft not found.",
+              "Make sure Bsoft programs are in $PATH.")
 
     if not (spawn.find_executable("relion_refine")):
-        usage()
-        print "Error: Relion not found."
-        print "Make sure Relion programs are in $PATH."
-        print " "
-        sys.exit(2)
+        error("Error: Relion not found.",
+              "Make sure Relion programs are in $PATH.")
 
     symString = "C1"
     output = ""
     subparticle_distances = []
-    subparticle_vector_list = [] 
+    subparticle_vector_list = []
     input_cmm = ""
     part_image_size = -1
     relax_symmetry = False
@@ -386,41 +384,25 @@ def main():
             nr_procs = int(a)
 
     if len(args) == 0:
-        print " "
-        print "Error: No input file given."
-        usage()
-        sys.exit(2)
-
-    try:        
-        open(args[0],"r") 
-    except:
-        print " "
-        print "Error: Input file not found."
-        usage()
-        sys.exit(2)
-
-    if part_image_size < 0:
-        print " "
-        print "Error: Particle image size not given."
-        usage()
-        sys.exit(2)
-
-    if subpart_image_size < 0:
-        print " "
-        print "Error: Sub-particle image size not given."
-        usage()
-        sys.exit(2)
-
-    if angpix < 0:
-        print " "
-        print "Error: Pixel size not given."
-        usage()
-        sys.exit(2)
+        error("Error: No input file given.")
 
     input_star_filename = str(args[0])
+
+    if not os.path.exists(input_star_filename):
+        error("Error: Input file '%s' not found." % input_star_filename)
+
+    if part_image_size < 0:
+        error("Error: Particle image size not given.")
+
+    if subpart_image_size < 0:
+        error("Error: Sub-particle image size not given.")
+
+    if angpix < 0:
+        error("Error: Pixel size not given.")
+
     matrices = []
     particles = []
-    parameters = [] 
+    parameters = []
     subparticles = []
     all_subparticles = []
     all_subparticles_subtracted = []
@@ -435,9 +417,7 @@ def main():
         subparticle_distances = [float(x) / angpix for x in distances_string.split(',')]
 
         if len(subparticle_distances) != len(subparticle_vector_list):
-            print " "
-            print "Error: The number of distances doesn't match the number of vectors!"
-            sys.exit(2)
+            error("Error: The number of distances doesn't match the number of vectors!")
 
         for vector, distance in izip(subparticle_vector_list, subparticle_distances):
             if distance > 0:
@@ -454,15 +434,15 @@ def main():
     for subparticle_vector in subparticle_vector_list:
         print "Vector: ",
         subparticle_vector.print_vector()
-        print ""         
+        print ""
         print "Length: %.2f pixels" % subparticle_vector.distance
-    print ""   
-    
-    path = output + "/"      
+    print ""
+
+    path = output + "/"
     output_subt = output + "_subtracted"
 
     run_command("mkdir -p " + output, "/dev/null")
- 
+
     if split_stacks:
         print "Creating and splitting the particle stack..."
         print " Creating a normal stack from which nothing is subtracted..."
@@ -486,13 +466,13 @@ def main():
         print " "
 
     print "Creating subparticles..."
-    
+
     # setup toolbar   
     toolbar_width = 70
     sys.stdout.write("%s[oo]" % (" " * toolbar_width))
     sys.stdout.flush()
     sys.stdout.write("\b" * (toolbar_width))
-    c = 0   
+    c = 0
     timer = 0.01
 
     input_star = open(path + "particles.star", "r")
@@ -513,7 +493,7 @@ def main():
 
         for subparticle in subparticles:
             particle_filename = splitext(particle.rlnImageName[7:])[0] + "_" + index + ".mrc"
-            subparticle.setrlnMicrographName(particle_filename) 
+            subparticle.setrlnMicrographName(particle_filename)
             subparticle_filename = splitext(particle.rlnImageName[7:])[0] + "_" + index + "_subparticles.mrcs"
             subparticle.setrlnImageName(subparticle.rlnImageName[0:7] + subparticle_filename)
 
@@ -528,7 +508,7 @@ def main():
         if star:
             create_star(subparticles, star_filename)
             if subtract_masked_map:
-                create_star(subparticles_subtracted, star_filename_subtracted)       
+                create_star(subparticles_subtracted, star_filename_subtracted)
 
         if side > 0:
             subparticles = filter_subparticles_side(subparticles, side)
@@ -547,16 +527,16 @@ def main():
         all_subparticles.extend(subparticles)
         if subtract_masked_map:
             all_subparticles_subtracted.extend(subparticles_subtracted)
-       
+
         if nparticle == int(len(particles) * timer):
             sys.stdout.write("\b" * (c + 8))
             sys.stdout.write("." * c)
             sys.stdout.write("~~(,_,\">")
             sys.stdout.flush()
             timer = timer + 0.01
-            c = c + 1        
-   
-        nparticle = nparticle + 1    
+            c = c + 1
+
+        nparticle = nparticle + 1
     sys.stdout.write("\n")
 
     print "Finished creating the subparticles!"
@@ -590,7 +570,7 @@ def main():
 
     if subtract_masked_map:
         write_star(all_subparticles_subtracted, parameters, output_subt + ".star")
-    
+
     print "The output files have been written!"
     print "   Parameters for subparticles: *** " + output + ".star **"
 
