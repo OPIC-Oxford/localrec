@@ -238,27 +238,33 @@ def main():
 
     run_command("mkdir -p " + output, "/dev/null")
 
-    if split_stacks:
+    def create_stack(suffix, maskedFile, extraArgs=''):
         print "Creating and splitting the particle stack..."
-        print " Creating a normal stack from which nothing is subtracted..."
-        run_command("beditimg -create " + str(part_image_size) + "," + str(part_image_size) + "," + str(part_image_size) + " -fill 0 dummy_mask.mrc", "")
-        run_command("relion_project --i dummy_mask.mrc --o " + path + "particles" + " --ang " + input_star_filename + " --subtract_exp --angpix " + str(angpix), "")
-        run_command("rm -f dummy_mask.mrc", "")
-        run_command("bsplit -digits 6 -first 1 " + path + "particles" + ".mrcs:mrc " + path + "particles" + ".mrc", "")
+        if suffix:
+            print " Creating a stack from which the projections of the masked particle have been subtracted..."
+        else:
+            print " Creating a normal stack from which nothing is subtracted..."
+
+        outputParticles = "%sparticles%s" % (path, suffix)
+        run_command("relion_project --i %s --o %s --ang %s --subtract_exp --angpix %s %s"
+                    % (maskedFile, outputParticles, input_star_filename, angpix, extraArgs))
+
+        run_command("bsplit -digits 6 -first 1 %s.mrcs:mrc %s.mrc"
+                    % (outputParticles, outputParticles))
+
         print "Finished splitting the particle stack!"
         print " "
 
-    if subtract_masked_map:
-        print "Creating and splitting the particle stack..."
-        print " Creating a stack from which the projections of the masked particle have been subtracted..."
-        run_command("relion_project --i " + masked_map + " --o " + path + "particles_subtracted" + " --ang " + input_star_filename + " --subtract_exp --ctf --angpix " + str(angpix))
-        print "Finished subtracting the model projections!"
-        print " "
+    if split_stacks:
+        maskedFile = 'dummy_mask.mrc'
+        run_command("beditimg -create %s,%s,%s -fill 0 %s"
+                    % (part_image_size, part_image_size, part_image_size, maskedFile))
+        create_stack('', maskedFile)
+        run_command("rm -f %s" % maskedFile)
 
-        print "Splitting the subtracted particle stack..."
-        run_command("bsplit -digits 6 -first 1 " + path + "particles_subtracted" + ".mrcs:mrc " + path + "particles_subtracted" + ".mrc", "")
-        print "Finished splitting the subtracted particle stack!"
-        print " "
+    if subtract_masked_map:
+        create_stack('_subtracted', masked_map, '--ctf')
+
 
     print "Creating subparticles..."
 
