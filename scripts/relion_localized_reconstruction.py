@@ -211,9 +211,8 @@ class LocalizedReconstruction():
         particles, parameters = read_star(input_star)
         input_star.close()
 
-        relion_create_symmetry_ops_file(args.sym, "relion_symops.tmp")
-        symmetry_matrices = matrix_from_symmetry_ops_file("relion_symops.tmp")
-        run_command("rm relion_symops.tmp", "")
+        # Generate symmetry matrices with Relion convention
+        symmetry_matrices = matrix_from_symmetry(args.sym)
 
         nparticle = 0
 
@@ -229,54 +228,32 @@ class LocalizedReconstruction():
         if mindist > 0:
             filters.append(lambda x, y: filter_mindist(x, y, mindist))
 
-
         for particle in particles:
-            subparticles = create_subparticles(particle, symmetry_matrices,
+            subparticles, subtracted = create_subparticles(particle,
+                                               symmetry_matrices,
                                                subparticle_vector_list,
                                                part_image_size,
                                                args.relax_symmetry,
                                                args.randomize,
                                                "subparticles", unique,
                                                len(all_subparticles),
-                                               args.align_subparticles)
-
-            # to preserve numbering, ALL sub-particles are written to STAR files before filtering
-            index = particle.rlnImageName[0:6]
-            particle_prefix = splitext(particle.rlnImageName[7:])[0]
-            particle_filename = particle_prefix + "_" + index + ".mrc"
-
-            for subparticle in subparticles:
-                subparticle.setrlnMicrographName(particle_filename)
-                subparticle_filename = particle_prefix + "_" + index + "_subparticles.mrcs"
-                subparticle.setrlnImageName(subparticle.rlnImageName[0:7] + subparticle_filename)
-
-            if subtract_masked_map:
-                subparticles_subtracted = clone_subtracted_subparticles(subparticles)
-
-            if args.create_star:
-                create_star(subparticles, "%s_%s.star" % (particle_prefix, index))
-                if subtract_masked_map:
-                    create_star(subparticles_subtracted,
-                                "%s_subtracted_%s.star" % (particle_prefix, index))
-
-            if filters:
-                subparticles = filter_subparticles(subparticles, filters)
-                if subtract_masked_map:
-                    subparticles_subtracted = clone_subtracted_subparticles(subparticles)
+                                               args.align_subparticles,
+                                               subtract_masked_map,
+                                               create_star, filters)
 
             all_subparticles.extend(subparticles)
-            if subtract_masked_map:
-                all_subparticles_subtracted.extend(subparticles_subtracted)
+            all_subparticles_subtracted.extend(subtracted)
 
             if nparticle == int(len(particles) * timer):
                 sys.stdout.write("\b" * (c + 8))
                 sys.stdout.write("." * c)
                 sys.stdout.write("~~(,_,\">")
                 sys.stdout.flush()
-                timer = timer + 0.01
-                c = c + 1
+                timer += 0.01
+                c += 1
 
-            nparticle = nparticle + 1
+            nparticle += 1
+
         sys.stdout.write("\n")
 
         print "Finished creating the subparticles!"
