@@ -239,3 +239,30 @@ def run_command(command, output=""):
     else:
         os.system(command + " > " + output)
 
+
+class ProgressBar():
+    """ Implements a simple command line progress bar"""
+
+    def __init__(self, width, percent, total):
+        # setup toolbar
+        self.width = width
+        sys.stdout.write("%s[oo]" % (" " * width))
+        sys.stdout.flush()
+        sys.stdout.write("\b" * (width))
+        self.count = 0 # total count
+        self.c = 0 # progress count
+        self.percent = percent
+        self.timer = percent
+        self.total = total
+
+    def notify(self):
+        if self.count == int(self.total * self.timer):
+            sys.stdout.write("\b" * (self.c + 8))
+            sys.stdout.write("." * self.c)
+            sys.stdout.write("~~(,_,\">")
+            sys.stdout.flush()
+            self.timer += self.percent
+            self.c += 1
+
+        self.count += 1
+

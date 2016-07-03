@@ -199,22 +199,15 @@ class LocalizedReconstruction():
 
         print "Creating subparticles..."
 
-        # setup toolbar
-        toolbar_width = 70
-        sys.stdout.write("%s[oo]" % (" " * toolbar_width))
-        sys.stdout.flush()
-        sys.stdout.write("\b" * (toolbar_width))
-        c = 0
-        timer = 0.01
-
         input_star = open(path + "particles.star", "r")
         particles, parameters = read_star(input_star)
         input_star.close()
 
+        # Initialize progress bar
+        progressbar = ProgressBar(width=70, percent=0.01, total=len(particles))
+
         # Generate symmetry matrices with Relion convention
         symmetry_matrices = matrix_from_symmetry(args.sym)
-
-        nparticle = 0
 
         # Define some conditions to filter subparticles
         filters = []
@@ -244,15 +237,7 @@ class LocalizedReconstruction():
             all_subparticles.extend(subparticles)
             all_subparticles_subtracted.extend(subtracted)
 
-            if nparticle == int(len(particles) * timer):
-                sys.stdout.write("\b" * (c + 8))
-                sys.stdout.write("." * c)
-                sys.stdout.write("~~(,_,\">")
-                sys.stdout.flush()
-                timer += 0.01
-                c += 1
-
-            nparticle += 1
+            progressbar.notify()
 
         sys.stdout.write("\n")
 
