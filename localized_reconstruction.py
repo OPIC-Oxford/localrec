@@ -15,8 +15,6 @@ import os
 import re
 import math
 import random
-import copy
-import time
 from itertools import izip
 
 from star import *
@@ -24,9 +22,7 @@ from particle import *
 from matrix3 import *
 from vector3 import *
 from euler import *
-from os.path import basename
 from os.path import splitext
-from distutils import spawn
 
 
 
@@ -137,7 +133,7 @@ def create_subparticles(particle, symmetry_matrices, subparticle_vector_list,
             # which symmetry matrix created this subparticle
             symmetry_matrix = symmetry_matrices[symmetry_matrix_id-1]
 
-            subpart = copy.deepcopy(particle)
+            subpart = particle.clone()
 
             m = matrix_multiply((matrix_multiply(matrix_from_subparticle_vector, symmetry_matrix)), matrix_particle)
 
@@ -210,7 +206,7 @@ def clone_subtracted_subparticles(subparticles):
     subparticles_subtracted = []
 
     for sp in subparticles:
-        sp_new = copy.deepcopy(sp)
+        sp_new = sp.clone()
         sp_new.rlnImageName = sp_new.rlnImageName[:-24] + "subtracted" + sp_new.rlnImageName[-25:]
         subparticles_subtracted.append(sp_new)
 

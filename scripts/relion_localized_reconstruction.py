@@ -13,21 +13,7 @@
 
 import os
 import sys
-import getopt
-import re
-import math
-import random
-import copy
-import time
-from itertools import izip
 
-from star import *
-from particle import * 
-from matrix3 import *
-from vector3 import *
-from euler import *
-from os.path import basename
-from os.path import splitext
 from distutils import spawn
 from localized_reconstruction import *
 import argparse
