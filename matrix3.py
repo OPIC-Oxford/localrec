@@ -115,37 +115,53 @@ def matrix_transpose(m1):
     return m2
 
 
+def matrix_from_symmetry(symString):
+    """ Create the symmetry matrices from a given string using Relion convention.
+    We use use 'relion_refine --sym' to generate the symmetry file and
+    then parse it to load the matrices. """
+    tmpSymFile = "relion_symops.tmp"
+    relion_create_symmetry_ops_file(symString, tmpSymFile)
+    matrices = matrix_from_symmetry_ops_file(tmpSymFile)
+    os.remove(tmpSymFile)
+
+    return matrices
+
+
 def relion_create_symmetry_ops_file(symString, filename):
-    """create a symmetry operator file by running relion_refine --print_symmetry_ops"""
-    os.system("relion_refine --sym " + symString + " --print_symmetry_ops > " + " " + filename) 
-    return 0 
+    """ Create a symmetry operator file
+    by running relion_refine --print_symmetry_ops """
+    os.system("relion_refine --sym %s --print_symmetry_ops > %s"
+              % (symString, filename))
 
 
 def matrix_from_symmetry_ops_file(filename):
-    """obtain the lists with 9 values for the set_matrix method by a symmetry operator file"""
+    """ Obtain the lists with 9 values for the set_matrix method
+    by a symmetry operator file. """
    
-    lines = open(filename, 'r').readlines()
+    f = open(filename, 'r')
 
-    AllMatrices = []
+    allMatrices = []
     matrixLine = 0
     matrixFound = False
   
-    for line in lines:
-        values=line.split()
+    for line in f:
+        values = line.split()
+
         if " R(" in line:
              matrixFound = True
              matrixLine = 0
              a = []
              continue
-        if (matrixFound):
-             a.append(float(values[0]))
-             a.append(float(values[1]))
-             a.append(float(values[2]))
-             matrixLine = matrixLine + 1
-             if (matrixLine == 3):
-                 newMatrix = Matrix3(a)
-                 AllMatrices.append(newMatrix)
-                 matrixFound = False
 
-    return AllMatrices
+        if matrixFound:
+            a.extend(map(float, values[:3]))
+            matrixLine += 1
+
+            if matrixLine == 3:
+                allMatrices.append(Matrix3(a))
+                matrixFound = False
+
+    f.close()
+
+    return allMatrices
 
