@@ -33,7 +33,8 @@ from distutils import spawn
 
 
 def within_mindist(p1, p2, mindist):
-    """function that calculates whether two particles are closer to each other than the given distance in the projection"""
+    """ Function that calculates whether two particles are closer to each other
+    than the given distance in the projection. """
 
     x1 = p1.rlnCoordinateX
     y1 = p1.rlnCoordinateY
@@ -42,95 +43,57 @@ def within_mindist(p1, p2, mindist):
     distance_sqr = (x1 - x2)**2 + (y1 - y2)**2
     mindist_sqr = mindist**2
 
-    if distance_sqr < mindist_sqr:
-        return True
-    else:
-        return False
+    return distance_sqr < mindist_sqr
 
 
 def within_unique(p1, p2, unique):
-    """function that calculates whether two particles are closer to each other than the given angular distance"""
+    """ Function that calculates whether two particles are closer to each other
+    than the given angular distance. """
 
-    v1 =  vector_from_two_eulers(p1.rlnAnglePsi, p1.rlnAngleTilt)
-    v2 =  vector_from_two_eulers(p2.rlnAnglePsi, p2.rlnAngleTilt)
+    v1 = vector_from_two_eulers(p1.rlnAnglePsi, p1.rlnAngleTilt)
+    v2 = vector_from_two_eulers(p2.rlnAnglePsi, p2.rlnAngleTilt)
 
-    dp =  dot_product(v1, v2)/(v1.length()*v2.length())
+    dp = dot_product(v1, v2)/(v1.length()*v2.length())
 
     if dp < -1:
         dp = -1.000
+
     if dp > 1:
         dp = 1.000
 
     angle = math.acos(dp)
-    if angle <= math.radians(unique):
-        return True
-    else:
-        return False
+
+    return angle <= math.radians(unique)
 
 
-def filter_subparticles_mindist(subparticles, mindist):
-    """function that filters all subparticles removing any overlaps"""
+def filter_mindist(subparticles, subpart, mindist):
+    " Return True if subpart is not close to any other subparticle by mindist. "
+    for sp in subparticles:
+        if (sp.rlnImageName[:6] != subpart.rlnImageName[:6] and
+            within_mindist(sp, subpart, mindist)):
+            return False
 
-    new_subparticles = []
-
-    n = 0
-    while n < len(subparticles):
-        subparticle=subparticles[n]
-        overlaps = False
-
-        m = 0
-        while m < len(subparticles):
-           subparticle2 = subparticles[m]
-           if not subparticle.rlnImageName[:6] == subparticle2.rlnImageName[:6]:
-               overlaps = within_mindist(subparticle, subparticle2, mindist)
-           if overlaps:
-               break
-
-           m = m + 1              
-        
-        if not overlaps:
-            new_subparticle = copy.copy(subparticle)
-            new_subparticles.append(new_subparticle)
-
-        n = n + 1
-
-    return new_subparticles
+    return True
 
 
-def filter_subparticles_side(subparticles, side):
-    new_subparticles = []
-
-    n = 0
-    while n < len(subparticles):
-        subparticle=subparticles[n]
-
-        if (abs(abs(subparticle.rlnAngleTilt) - radians(90)) < side):
-            new_subparticle = copy.copy(subparticle)
-            new_subparticles.append(new_subparticle)
-
-        n = n + 1
-
-    return new_subparticles
+def filter_side(subpart, side):
+    return (abs(abs(subpart.rlnAngleTilt) - radians(90)) < side)
 
 
-def filter_subparticles_top(subparticles, top):
-    new_subparticles = []
-
-    n = 0
-    while n < len(subparticles):
-        subparticle=subparticles[n]
-
-        if (abs(abs(subparticle.rlnAngleTilt) - radians(180)) < top):
-            new_subparticle = copy.copy(subparticle)
-            new_subparticles.append(new_subparticle)
-
-        n = n + 1
-
-    return new_subparticles
+def filter_top(subpart, top):
+    return (abs(abs(subpart.rlnAngleTilt) - radians(180)) < top)
 
 
-def create_subparticles(particle, symmetry_matrices, subparticle_vector_list, part_image_size, relax_symmetry, randomize, output, unique, particles_total, align_subparticles):
-    """function that obtains all subparticles from a given particle and sets the properties of each such subparticle"""
+def filter_subparticles(subparticles, filters):
+    return [sp for sp in subparticles
+            if all(f(subparticles, sp) for f in filters)]
+
+
+def create_subparticles(particle, symmetry_matrices, subparticle_vector_list,
+                        part_image_size, relax_symmetry, randomize, output,
+                        unique, particles_total, align_subparticles):
+    """ Obtain all subparticles from a given particle and set
+    the properties of each such subparticle. """
 
     subparticles = []
 
