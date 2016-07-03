@@ -7,10 +7,12 @@
 # Modified: 2014/09/12 (JTH)
 # Modified: 2015/08/13 (JTH)
 
-import math
+import copy
+
 
 class Particle:
-    """Class defining Particle and methods needed to set its necessary parameters"""
+    """ Class defining Particle and methods needed to set its necessary
+    parameters. """
 
     def __init__(self):
          self.rlnVoltage = 0
@@ -144,5 +146,7 @@ class Particle:
 
     def print_particle(self):
         print("%.6f" %float(self.rlnVoltage) + "\t")
-  
+
+    def clone(self):
+        return copy.deepcopy(self)
 
