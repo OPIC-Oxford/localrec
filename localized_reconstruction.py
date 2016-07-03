@@ -12,8 +12,6 @@
 # Modified: 2016/01/26 (JTH)
 
 import os
-import sys
-import getopt
 import re
 import math
 import random
@@ -229,6 +227,147 @@ def create_star(subparticles, star_filename):
                   "rlnImageName"
                   ]
     write_star(subparticles, parameters, star_filename)
+
+
+def load_vectors(cmm_file, vectors_str, distances_str, angpix):
+    """ Load subparticle vectors either from Chimera CMM file or from
+    a vectors string. Distances can also be specified for each vector
+    in the distances_str. """
+    if cmm_file:
+        subparticle_vector_list = vectors_from_cmm(cmm_file, angpix)
+    else:
+        subparticle_vector_list = vectors_from_string(vectors_str)
+
+    if distances_str:
+        # Change distances from A to pixel units
+        subparticle_distances = [float(x) / angpix for x in
+                                 distances_str.split(',')]
+
+        if len(subparticle_distances) != len(subparticle_vector_list):
+            raise Exception("Error: The number of distances doesn't match "
+                            "the number of vectors!")
+
+        for vector, distance in izip(subparticle_vector_list,
+                                     subparticle_distances):
+            if distance > 0:
+                vector.set_distance(distance)
+            else:
+                vector.compute_distance()
+    else:
+        for vector in subparticle_vector_list:
+            vector.compute_distance()
+
+    print "Creating subparticles using vectors:"
+
+    for subparticle_vector in subparticle_vector_list:
+        print "Vector: ",
+        subparticle_vector.print_vector()
+        print ""
+        print "Length: %.2f pixels" % subparticle_vector.distance
+    print ""
+
+    return subparticle_vector_list
+
+
+def load_filters(side, top, mindist):
+    """ Create some filters depending on the conditions imposed by the user.
+    Each filter will return True if the subparticle will be kept in the
+    subparticles list.
+    """
+    filters = []
+
+    if side > 0:
+        filters.append(lambda x, y: filter_side(y, side))
+
+    if top > 0:
+        filters.append(lambda x, y: filter_top(y, top))
+
+    if mindist > 0:
+        filters.append(lambda x, y: filter_mindist(x, y, mindist))
+
+    return filters
+
+
+def create_initial_stacks(input_star, particle_size, angpix,
+                          split_stacks, masked_map, output):
+    """ Create initial particle stacks (and star files) to be used
+    for extraction of subparticles.
+    If the subtracted_map is passed, another stack with subtracted
+    particles will be created. """
+
+    def create_stack(suffix, maskedFile, extra=''):
+        print "Creating and splitting the particle stack..."
+        if suffix:
+            print(" Creating a stack from which the projections of the masked "
+                  "particle have been subtracted...")
+        else:
+            print " Creating a normal stack from which nothing is subtracted..."
+
+        outputParticles = "%s/particles%s" % (output, suffix)
+        args = " --i %s --o %s --ang %s --subtract_exp --angpix %s " + extra
+        run_command("relion_project" + args %
+                    (maskedFile, outputParticles, input_star, angpix))
+
+        run_command("bsplit -digits 6 -first 1 %s.mrcs:mrc %s.mrc"
+                    % (outputParticles, outputParticles))
+
+        print "Finished splitting the particle stack!"
+        print " "
+
+    if split_stacks:
+        maskedFile = 'dummy_mask.mrc'
+        run_command("beditimg -create %s,%s,%s -fill 0 %s"
+                    % (particle_size, particle_size, particle_size, maskedFile))
+        create_stack('', maskedFile)
+        run_command("rm -f %s" % maskedFile)
+
+    if masked_map:
+        create_stack('_subtracted', masked_map, '--ctf')
+
+
+def extract_subparticles(subpart_size, np, masked_map, output):
+    """ Extract subparticles images from each particle
+    (Using 'relion_preprocess' as if the particle was a micrograph. """
+
+    print "Extracting the subparticles..."
+
+    if np == 1:
+        cmd = 'relion_preprocess '
+    else:
+        cmd = 'mpirun -np %s relion_preprocess_mpi ' % np
+
+    def run_extract(suffix=''):
+        args = ('--extract --o subparticles --extract_size %s --coord_files '
+                '"%s/particles%s_??????.star"') % (subpart_size, output, suffix)
+        run_command(cmd + args)
+        run_command('mv subparticles.star %s%s_preprocess.star'
+                    % (output, suffix))
+
+    run_extract()  # Run extraction without subtracted density
+
+    if masked_map:
+        run_extract('_subtracted')
+
+    run_command("mv Particles/%s/* %s/" % (output, output))
+    run_command("rmdir Particles/" + output)
+
+    print "Finished extracting the sub-particles!\n"
+
+
+def write_output_starfiles(subparticles, subparticles_subtracted,
+                           parameters, output):
+    print "Writing output star files."
+
+    print "   Parameters for subparticles: \n      *** %s.star **" % output
+    write_star(subparticles, parameters, output + ".star")
+
+    if subparticles_subtracted:
+        print("   Parameters for subparticles after subtractions: \n"
+              "      *** %s_subtracted.star ***" % output)
+        write_star(subparticles_subtracted, parameters,
+                   "%s_subtracted.star" % output)
+
+    print "The output files have been written!\n"
 
 
 def run_command(command, output=""):

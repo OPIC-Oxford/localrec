@@ -35,10 +35,12 @@ import argparse
 
 
 class LocalizedReconstruction():
+
     def define_parser(self):
         self.parser = argparse.ArgumentParser(
             description="Calculates the coordinates and Euler angles for the "
-                        "subparticles defined by a vector and symmetry point group.")
+                        "subparticles defined by a vector and symmetry point "
+                        "group.")
         required = self.parser.add_argument_group('required arguments')
         add = self.parser.add_argument  # shortcut
         addr = required.add_argument
@@ -81,11 +83,11 @@ class LocalizedReconstruction():
             help="Minimum distance between the subparticles in the image "
                  "(all overlapping ones will be discarded; pixels).")
         add('--side', type=float, default=25,
-            help="Keep only particles within specified angular distance from side "
-                 "views (all others will be discarded; degrees).")
+            help="Keep only particles within specified angular distance from "
+                 "side views (all others will be discarded; degrees).")
         add('--top', type=float, default=25,
-            help="Keep only particles within specified angular distance from top "
-                 "views (all others will be discarded; degrees).")
+            help="Keep only particles within specified angular distance from "
+                 "top views (all others will be discarded; degrees).")
         add('--output', default='subparticles',
             help="Output root for results.")
         add('--j', type=int, default=8, help="Number of threads.")
@@ -100,106 +102,48 @@ class LocalizedReconstruction():
         print " "
         sys.exit(2)
 
-    def main(self):
-        self.define_parser()
-        args = self.parser.parse_args()
-
+    def validate(self, args):
         if not (spawn.find_executable("bimg")):
             self.error("Error: Bsoft not found.",
-                  "Make sure Bsoft programs are in $PATH.")
+                       "Make sure Bsoft programs are in $PATH.")
 
         if not (spawn.find_executable("relion_refine")):
             self.error("Error: Relion not found.",
-                  "Make sure Relion programs are in $PATH.")
+                       "Make sure Relion programs are in $PATH.")
 
         if len(sys.argv) == 1:
             self.error("Error: No input file given.")
 
-        input_star_filename = args.input_star
+        if not os.path.exists(args.input_star):
+            self.error("Error: Input file '%s' not found."
+                       % args.input_star)
 
-        if not os.path.exists(input_star_filename):
-            self.error("Error: Input file '%s' not found." % input_star_filename)
+    def main(self):
+        self.define_parser()
+        args = self.parser.parse_args()
 
-        angpix = args.angpix
-        part_image_size = args.particle_size
+        # Validate input arguments and required software (Relion and Bsoft)
+        self.validate(args)
+
+        particle_size = args.particle_size
         subpart_image_size = args.subparticle_size
         output = args.output
         subtract_masked_map = args.masked_map is not None
-        side = args.side
-        top = args.top
-        unique = args.unique
-        mindist = args.mindist
 
-        all_subparticles = []
-        all_subparticles_subtracted = []
-
-        if args.cmm:
-            subparticle_vector_list = vectors_from_cmm(args.cmm, angpix)
-        else:
-            subparticle_vector_list = vectors_from_string(args.vector)
-
-        if args.length:
-            # Change distances from A to pixel units
-            subparticle_distances = [float(x) / angpix for x in args.length.split(',')]
-
-            if len(subparticle_distances) != len(subparticle_vector_list):
-                self.error("Error: The number of distances doesn't match the number of vectors!")
-
-            for vector, distance in izip(subparticle_vector_list, subparticle_distances):
-                if distance > 0:
-                    vector.set_distance(distance)
-                else:
-                    vector.compute_distance()
-        else:
-            for vector in subparticle_vector_list:
-                vector.compute_distance()
-
-
-        print "Creating subparticles using:"
-
-        for subparticle_vector in subparticle_vector_list:
-            print "Vector: ",
-            subparticle_vector.print_vector()
-            print ""
-            print "Length: %.2f pixels" % subparticle_vector.distance
-        print ""
-
-        path = output + "/"
-        output_subt = output + "_subtracted"
+        # Load subparticle vectors either from Chimera CMM file or from
+        # command line (command and semi-colon separated)
+        # Distances can also be specified to modify vector lengths
+        subparticle_vector_list = load_vectors(args.cmm, args.vector,
+                                               args.length, args.angpix)
 
         run_command("mkdir -p " + output, "/dev/null")
 
-        def create_stack(suffix, maskedFile, extraArgs=''):
-            print "Creating and splitting the particle stack..."
-            if suffix:
-                print " Creating a stack from which the projections of the masked particle have been subtracted..."
-            else:
-                print " Creating a normal stack from which nothing is subtracted..."
-
-            outputParticles = "%sparticles%s" % (path, suffix)
-            run_command("relion_project --i %s --o %s --ang %s --subtract_exp --angpix %s %s"
-                        % (maskedFile, outputParticles, input_star_filename, angpix, extraArgs))
-
-            run_command("bsplit -digits 6 -first 1 %s.mrcs:mrc %s.mrc"
-                        % (outputParticles, outputParticles))
-
-            print "Finished splitting the particle stack!"
-            print " "
-
-        if args.split_stacks:
-            maskedFile = 'dummy_mask.mrc'
-            run_command("beditimg -create %s,%s,%s -fill 0 %s"
-                        % (part_image_size, part_image_size, part_image_size, maskedFile))
-            create_stack('', maskedFile)
-            run_command("rm -f %s" % maskedFile)
-
-        if subtract_masked_map:
-            create_stack('_subtracted', args.masked_map, '--ctf')
-
+        create_initial_stacks(args.input_star, particle_size, args.angpix,
+                              args.split_stacks, args.masked_map, output)
 
         print "Creating subparticles..."
 
-        input_star = open(path + "particles.star", "r")
+        input_star = open(output + "/particles.star", "r")
         particles, parameters = read_star(input_star)
         input_star.close()
 
@@ -210,76 +154,39 @@ class LocalizedReconstruction():
         symmetry_matrices = matrix_from_symmetry(args.sym)
 
         # Define some conditions to filter subparticles
-        filters = []
+        filters = load_filters(args.side, args.top, args.mindist)
 
-        if side > 0:
-            filters.append(lambda x, y: filter_side(y, side))
-
-        if top > 0:
-            filters.append(lambda x, y: filter_top(y, top))
-
-        if mindist > 0:
-            filters.append(lambda x, y: filter_mindist(x, y, mindist))
+        # Compute all subparticles (included subtracted if masked_map given)
+        all_subparticles = []
+        all_subparticles_subtracted = []
 
         for particle in particles:
             subparticles, subtracted = create_subparticles(particle,
-                                               symmetry_matrices,
-                                               subparticle_vector_list,
-                                               part_image_size,
-                                               args.relax_symmetry,
-                                               args.randomize,
-                                               "subparticles", unique,
-                                               len(all_subparticles),
-                                               args.align_subparticles,
-                                               subtract_masked_map,
-                                               create_star, filters)
+                                                   symmetry_matrices,
+                                                   subparticle_vector_list,
+                                                   particle_size,
+                                                   args.relax_symmetry,
+                                                   args.randomize,
+                                                   "subparticles", args.unique,
+                                                   len(all_subparticles),
+                                                   args.align_subparticles,
+                                                   subtract_masked_map,
+                                                   create_star, filters)
 
             all_subparticles.extend(subparticles)
             all_subparticles_subtracted.extend(subtracted)
 
             progressbar.notify()
 
-        sys.stdout.write("\n")
-
-        print "Finished creating the subparticles!"
-        print " "
+        print "\nFinished creating the subparticles!\n"
 
         if args.extract_subparticles:
-            print "Extracting the subparticles..."
-            if args.np == 1:
-                cmd = 'relion_preprocess '
-            else:
-                cmd = 'mpirun -np %s relion_preprocess_mpi ' % args.np
+            extract_subparticles(subpart_image_size, args.np,
+                                 args.masked_map, output)
 
-            suffix = '_substracted' if subtract_masked_map else ''
-
-            def run_extract(suffix=''):
-                args = '--extract --o subparticles --extract_size %s --coord_files "%sparticles%s_??????.star"' % (subpart_image_size, path, suffix)
-                run_command(cmd + args)
-                run_command('mv subparticles.star %s%s_preprocess.star' % (output, suffix))
-
-            run_extract() # Run extraction without substracted density
-
-            if subtract_masked_map:
-                run_extract('_subtracted')
-
-            run_command("mv Particles/%s/* %s/" % (output, output))
-            run_command("rmdir Particles/" + output)
-            print "Finished extracting the sub-particles!\n"
-
-
-        write_star(all_subparticles, parameters, output + ".star")
-
-        if subtract_masked_map:
-            write_star(all_subparticles_subtracted, parameters, output_subt + ".star")
-
-        print "The output files have been written!"
-        print "   Parameters for subparticles: *** " + output + ".star **"
-
-        if subtract_masked_map:
-            print "   Parameters for subparticles after subtractions: *** " + output_subt + ".star ***"
-
-        print " "
+        # Write final star files with all subparticles
+        write_output_starfiles(all_subparticles, all_subparticles_subtracted,
+                               parameters, output)
 
 
 if __name__ == "__main__":    
