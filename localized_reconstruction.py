@@ -11,6 +11,7 @@
 # Modified: 2015/09/22 (JTH)
 # Modified: 2016/01/26 (JTH)
 
+import sys
 import os
 import re
 import math
@@ -62,10 +63,11 @@ def within_unique(p1, p2, unique):
 
 def filter_unique(subparticles, subpart, unique):
     """ Return True if subpart is not close to any other subparticle
-        by unique (angular distance). """
+        by unique (angular distance).
+        For this function we assume that subpart is not contained
+        inside."""
     for sp in subparticles:
-        if (sp.rlnImageName[:6] != subpart.rlnImageName[:6] and
-            within_unique(sp, subpart, unique)):
+        if within_unique(sp, subpart, unique):
             return False
 
     return True
@@ -105,7 +107,7 @@ def create_subparticles(particle, symmetry_matrices, subparticle_vector_list,
     part_index = particle.rlnImageName[0:6]
     part_prefix = splitext(particle.rlnImageName[7:])[0]
     part_filename = "%s_%s.mrc" % (part_prefix, part_index)
-    part_stack = "%s_%s_%s.mrcs" % (part_prefix, output, part_index)
+    part_stack = "%s_%s_%s.mrcs" % (part_prefix, part_index, output)
 
     # Euler angles that take particle to the orientation of the model
     rot  = -particle.rlnAnglePsi
@@ -172,10 +174,7 @@ def create_subparticles(particle, symmetry_matrices, subparticle_vector_list,
             if not overlaps:
                 subpart.setrlnImageName("%06d@%s" % (subpart_id, part_stack))
                 subpart.setrlnParticleName(str(subparticles_total))
-                # Taken from out of this function (a bit of duplication)
                 subpart.setrlnMicrographName(part_filename)
-                subpart_filename = "%s_%s_subparticles.mrcs" % (part_prefix, part_index)
-                subpart.setrlnImageName(subpart.rlnImageName[0:7] + subpart_filename)
                 subparticles.append(subpart)
                 subpart_id += 1
                 subparticles_total += 1
