@@ -62,16 +62,16 @@ class LocalizedReconstruction():
         add('--cmm',
             help="A CMM file defining the location(s) of the subparticle(s) "
                  "(use instead of --vector). Coordinates in Angstrom.")
-        add('--unique', type=float, default=1,
+        add('--unique', type=float, default=-1,
             help="Keep only unique subparticles within angular distance "
                  "(useful to remove overlapping sub-particles on symmetry axis).")
-        add('--mindist', type=float, default=5,
+        add('--mindist', type=float, default=-1,
             help="Minimum distance between the subparticles in the image "
                  "(all overlapping ones will be discarded; pixels).")
-        add('--side', type=float, default=25,
+        add('--side', type=float, default=-1,
             help="Keep only particles within specified angular distance from "
                  "side views (all others will be discarded; degrees).")
-        add('--top', type=float, default=25,
+        add('--top', type=float, default=-1,
             help="Keep only particles within specified angular distance from "
                  "top views (all others will be discarded; degrees).")
         add('--output', default='subparticles',
