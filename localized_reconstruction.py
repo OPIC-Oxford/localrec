@@ -19,12 +19,11 @@ import random
 from itertools import izip
 
 from star import *
-from particle import * 
+from particle import *
 from matrix3 import *
 from vector3 import *
 from euler import *
 from os.path import splitext
-
 
 
 def within_mindist(p1, p2, mindist):
@@ -35,8 +34,8 @@ def within_mindist(p1, p2, mindist):
     y1 = p1.rlnCoordinateY
     x2 = p2.rlnCoordinateX
     y2 = p2.rlnCoordinateY
-    distance_sqr = (x1 - x2)**2 + (y1 - y2)**2
-    mindist_sqr = mindist**2
+    distance_sqr = (x1 - x2) ** 2 + (y1 - y2) ** 2
+    mindist_sqr = mindist ** 2
 
     return distance_sqr < mindist_sqr
 
@@ -48,7 +47,7 @@ def within_unique(p1, p2, unique):
     v1 = vector_from_two_eulers(p1.rlnAnglePsi, p1.rlnAngleTilt)
     v2 = vector_from_two_eulers(p2.rlnAnglePsi, p2.rlnAngleTilt)
 
-    dp = dot_product(v1, v2)/(v1.length()*v2.length())
+    dp = dot_product(v1, v2) / (v1.length() * v2.length())
 
     if dp < -1:
         dp = -1.000
@@ -78,7 +77,7 @@ def filter_mindist(subparticles, subpart, mindist):
     by mindist. """
     for sp in subparticles:
         if (sp.rlnImageName[:6] != subpart.rlnImageName[:6] and
-            within_mindist(sp, subpart, mindist)):
+                within_mindist(sp, subpart, mindist)):
             return False
 
     return True
@@ -97,10 +96,24 @@ def filter_subparticles(subparticles, filters):
             if all(f(subparticles, sp) for f in filters)]
 
 
+def angles_to_radians(particle):
+    """ Convert the particle angles to radians. """
+    particle.rlnAnglePsi = math.radians(particle.rlnAnglePsi)
+    particle.rlnAngleTilt = math.radians(particle.rlnAngleTilt)
+    particle.rlnAngleRot = math.radians(particle.rlnAngleRot)
+
+
+def angles_to_degrees(particle):
+    """ Convert the particle angles to radians. """
+    particle.rlnAnglePsi = math.degrees(particle.rlnAnglePsi)
+    particle.rlnAngleTilt = math.degrees(particle.rlnAngleTilt)
+    particle.rlnAngleRot = math.degrees(particle.rlnAngleRot)
+
+
 def create_subparticles(particle, symmetry_matrices, subparticle_vector_list,
                         part_image_size, relax_symmetry, randomize, output,
                         unique, subparticles_total, align_subparticles,
-                        subtract_masked_map, create_star, filters):
+                        subtract_masked_map, do_create_star, filters):
     """ Obtain all subparticles from a given particle and set
     the properties of each such subparticle. """
 
@@ -109,10 +122,13 @@ def create_subparticles(particle, symmetry_matrices, subparticle_vector_list,
     part_filename = "%s_%s.mrc" % (part_prefix, part_index)
     part_stack = "%s_%s_%s.mrcs" % (part_prefix, part_index, output)
 
+    # We convert the particle angles to radian for further computations
+    angles_to_radians(particle)
+
     # Euler angles that take particle to the orientation of the model
-    rot  = -particle.rlnAnglePsi
+    rot = -particle.rlnAnglePsi
     tilt = -particle.rlnAngleTilt
-    psi  = -particle.rlnAngleRot
+    psi = -particle.rlnAngleRot
     matrix_particle = matrix_from_euler(rot, tilt, psi)
 
     subparticles = []
@@ -133,11 +149,13 @@ def create_subparticles(particle, symmetry_matrices, subparticle_vector_list,
         for symmetry_matrix_id in symmetry_matrix_ids:
             # symmetry_matrix_id can be later written out to find out
             # which symmetry matrix created this subparticle
-            symmetry_matrix = symmetry_matrices[symmetry_matrix_id-1]
+            symmetry_matrix = symmetry_matrices[symmetry_matrix_id - 1]
 
             subpart = particle.clone()
 
-            m = matrix_multiply((matrix_multiply(matrix_from_subparticle_vector, symmetry_matrix)), matrix_particle)
+            m = matrix_multiply((matrix_multiply(matrix_from_subparticle_vector,
+                                                 symmetry_matrix)),
+                                matrix_particle)
 
             if align_subparticles:
                 rotNew, tiltNew, psiNew = euler_from_matrix(m)
@@ -146,9 +164,9 @@ def create_subparticles(particle, symmetry_matrices, subparticle_vector_list,
                 rotNew, tiltNew, psiNew = euler_from_matrix(m2)
 
             # save Euler angles that take the model to the orientation of the subparticle
-            subpart.setrlnAngleRot(-psiNew)
-            subpart.setrlnAngleTilt(-tiltNew)
-            subpart.setrlnAnglePsi(-rotNew)
+            subpart.rlnAngleRot = -psiNew
+            subpart.rlnAngleTilt = -tiltNew
+            subpart.rlnAnglePsi = -rotNew
 
             # subparticle origin
             x = -m.m[2][0] * subparticle_vector.distance + particle.rlnOriginX
@@ -156,25 +174,26 @@ def create_subparticles(particle, symmetry_matrices, subparticle_vector_list,
             z = -m.m[2][2] * subparticle_vector.distance
 
             # modify the subparticle defocus paramaters by its z location
-            subpart.setrlnDefocusU(particle.rlnDefocusU + z)
-            subpart.setrlnDefocusV(particle.rlnDefocusV + z)
+            if hasattr(particle, 'rlnDefocusU'):
+                subpart.rlnDefocusU = particle.rlnDefocusU + z
+                subpart.rlnDefocusV = particle.rlnDefocusV + z
 
             # save the subparticle coordinates (integer part) relative to the
             # user given image size and as a small shift in the origin (decimal part)
             x_d, x_i = math.modf(x)
             y_d, y_i = math.modf(y)
-            subpart.setrlnCoordinateX(int(part_image_size/2) - x_i)
-            subpart.setrlnCoordinateY(int(part_image_size/2) - y_i)
-            subpart.setrlnOriginX(-x_d)
-            subpart.setrlnOriginY(-y_d)
+            subpart.rlnCoordinateX = int(part_image_size / 2) - x_i
+            subpart.rlnCoordinateY = int(part_image_size / 2) - y_i
+            subpart.rlnOriginX = -x_d
+            subpart.rlnOriginY = -y_d
 
             overlaps = (unique >= 0 and
                         not filter_unique(subparticles, subpart, unique))
 
             if not overlaps:
-                subpart.setrlnImageName("%06d@%s" % (subpart_id, part_stack))
-                subpart.setrlnParticleName(str(subparticles_total))
-                subpart.setrlnMicrographName(part_filename)
+                subpart.rlnImageName = "%06d@%s" % (subpart_id, part_stack)
+                subpart.rlnParticleName = str(subparticles_total)
+                subpart.rlnMicrographName = part_filename
                 subparticles.append(subpart)
                 subpart_id += 1
                 subparticles_total += 1
@@ -187,14 +206,18 @@ def create_subparticles(particle, symmetry_matrices, subparticle_vector_list,
         subtracted = clone_subtracted_subparticles(subparticles)
 
     # To preserve numbering, ALL sub-particles are written to STAR files before filtering
-    if create_star:
-        create_star(subparticles, "%s_%s.star" % (part_prefix, part_index))
+    if do_create_star:
+        starfile = "%s_%s.star" % (part_prefix, part_index)
+        create_star(subparticles, starfile)
         if subtract_masked_map:
-            create_star(subtracted, "%s_subtracted_%s.star"
-                        % (part_prefix, part_index))
+            create_star(subtracted, add_suffix(starfile))
 
     if filters:
         subparticles = filter_subparticles(subparticles, filters)
+        # We convert back angles to degrees
+        for subpart in subparticles:
+            angles_to_degrees(subpart)
+
         if subtract_masked_map:
             subtracted = clone_subtracted_subparticles(subparticles)
 
@@ -206,10 +229,15 @@ def clone_subtracted_subparticles(subparticles):
 
     for sp in subparticles:
         sp_new = sp.clone()
-        sp_new.rlnImageName = sp_new.rlnImageName[:-24] + "subtracted" + sp_new.rlnImageName[-25:]
+        sp_new.rlnImageName = add_suffix(sp.rlnImageName)
+        sp_new.rlnMicrographName = add_suffix(sp.rlnMicrographName)
         subparticles_subtracted.append(sp_new)
 
     return subparticles_subtracted
+
+
+def add_suffix(filename):
+    return filename.replace('particles_', 'particles_subtracted_')
 
 
 def create_star(subparticles, star_filename):
@@ -349,18 +377,23 @@ def extract_subparticles(subpart_size, np, masked_map, output):
     print "Finished extracting the sub-particles!\n"
 
 
-def write_output_starfiles(subparticles, subparticles_subtracted,
-                           parameters, output):
+def write_output_starfiles(labels, mdOut, mdOutSub, output):
+
+    labels.extend(['rlnCoordinateX', 'rlnCoordinateY', 'rlnMicrographName'])
     print "Writing output star files."
 
-    print "   Parameters for subparticles: \n      *** %s.star **" % output
-    write_star(subparticles, parameters, output + ".star")
+    starfile = output + ".star"
+    print "   Parameters for subparticles: \n      *** %s **" % starfile
+    # Write final star files with all subparticles
+    mdOut.addLabels(labels)
+    mdOut.write(output + '.star')
 
-    if subparticles_subtracted:
+    if len(mdOutSub):
+        starfile2 = starfile.replace('.star', '_subtracted.star')
         print("   Parameters for subparticles after subtractions: \n"
-              "      *** %s_subtracted.star ***" % output)
-        write_star(subparticles_subtracted, parameters,
-                   "%s_subtracted.star" % output)
+              "      *** %s ***" % starfile2)
+        mdOutSub.addLabels(labels)
+        mdOutSub.write(starfile2)
 
     print "The output files have been written!\n"
 
@@ -383,8 +416,8 @@ class ProgressBar():
         sys.stdout.write("%s[oo]" % (" " * width))
         sys.stdout.flush()
         sys.stdout.write("\b" * (width))
-        self.count = 0 # total count
-        self.c = 0 # progress count
+        self.count = 0  # total count
+        self.c = 0  # progress count
         self.percent = percent
         self.timer = percent
         self.total = total
@@ -399,4 +432,3 @@ class ProgressBar():
             self.c += 1
 
         self.count += 1
-

@@ -15,8 +15,11 @@ import os
 import sys
 
 from distutils import spawn
-from localized_reconstruction import *
 import argparse
+
+from localized_reconstruction import *
+from metadata import MetaData
+
 
 
 
@@ -124,17 +127,21 @@ class LocalizedReconstruction():
 
         run_command("mkdir -p " + output, "/dev/null")
 
-        create_initial_stacks(args.input_star, particle_size, args.angpix,
-                              args.split_stacks, args.masked_map, output)
+        if args.extract_subparticles:
+            create_initial_stacks(args.input_star, particle_size, args.angpix,
+                                  args.split_stacks, args.masked_map, output)
+            particles_star = output + "/particles.star"
+        else:
+            particles_star = args.input_star
 
         print "Creating subparticles..."
 
-        input_star = open(output + "/particles.star", "r")
-        particles, parameters = read_star(input_star)
-        input_star.close()
+
+        md = MetaData(particles_star)
+        print "len(md): ", len(md)
 
         # Initialize progress bar
-        progressbar = ProgressBar(width=70, percent=0.01, total=len(particles))
+        progressbar = ProgressBar(width=70, percent=0.01, total=len(md))
 
         # Generate symmetry matrices with Relion convention
         symmetry_matrices = matrix_from_symmetry(args.sym)
@@ -143,10 +150,10 @@ class LocalizedReconstruction():
         filters = load_filters(args.side, args.top, args.mindist)
 
         # Compute all subparticles (included subtracted if masked_map given)
-        all_subparticles = []
-        all_subparticles_subtracted = []
+        mdOut = MetaData()
+        mdOutSub = MetaData()
 
-        for particle in particles:
+        for particle in md:
             subparticles, subtracted = create_subparticles(particle,
                                                    symmetry_matrices,
                                                    subparticle_vector_list,
@@ -154,13 +161,13 @@ class LocalizedReconstruction():
                                                    args.relax_symmetry,
                                                    args.randomize,
                                                    "subparticles", args.unique,
-                                                   len(all_subparticles),
+                                                   len(mdOut),
                                                    args.align_subparticles,
                                                    subtract_masked_map,
-                                                   create_star, filters)
+                                                   args.create_star, filters)
 
-            all_subparticles.extend(subparticles)
-            all_subparticles_subtracted.extend(subtracted)
+            mdOut.addData(subparticles)
+            mdOutSub.addData(subtracted)
 
             progressbar.notify()
 
@@ -170,9 +177,7 @@ class LocalizedReconstruction():
             extract_subparticles(subpart_image_size, args.np,
                                  args.masked_map, output)
 
-        # Write final star files with all subparticles
-        write_output_starfiles(all_subparticles, all_subparticles_subtracted,
-                               parameters, output)
+        write_output_starfiles(md.getLabels(), mdOut, mdOutSub, output)
 
 
 if __name__ == "__main__":    
