@@ -214,9 +214,6 @@ def create_subparticles(particle, symmetry_matrices, subparticle_vector_list,
 
     if filters:
         subparticles = filter_subparticles(subparticles, filters)
-        # We convert back angles to degrees
-        for subpart in subparticles:
-            angles_to_degrees(subpart)
 
         if subtract_masked_map:
             subtracted = clone_subtracted_subparticles(subparticles)
@@ -382,18 +379,22 @@ def write_output_starfiles(labels, mdOut, mdOutSub, output):
     labels.extend(['rlnCoordinateX', 'rlnCoordinateY', 'rlnMicrographName'])
     print "Writing output star files."
 
-    starfile = output + ".star"
-    print "   Parameters for subparticles: \n      *** %s **" % starfile
-    # Write final star files with all subparticles
-    mdOut.addLabels(labels)
-    mdOut.write(output + '.star')
+    starfile1 = output + ".star"
+    print "   Parameters for subparticles: \n      *** %s **" % starfile1
+    # We convert back angles to degrees and write subparticles star file
+    def _writeMd(md, starfile):
+        for subpart in md:
+            angles_to_degrees(subpart)
+        md.addLabels(labels)
+        md.write(starfile)
+
+    _writeMd(mdOut, starfile1)
 
     if len(mdOutSub):
-        starfile2 = starfile.replace('.star', '_subtracted.star')
+        starfile2 = starfile1.replace('.star', '_subtracted.star')
         print("   Parameters for subparticles after subtractions: \n"
               "      *** %s ***" % starfile2)
-        mdOutSub.addLabels(labels)
-        mdOutSub.write(starfile2)
+        _writeMd(mdOutSub, starfile2)
 
     print "The output files have been written!\n"
 
