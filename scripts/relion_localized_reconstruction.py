@@ -138,7 +138,6 @@ class LocalizedReconstruction():
 
 
         md = MetaData(particles_star)
-        print "len(md): ", len(md)
 
         # Initialize progress bar
         progressbar = ProgressBar(width=70, percent=0.01, total=len(md))
