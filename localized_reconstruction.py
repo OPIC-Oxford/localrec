@@ -281,6 +281,7 @@ def load_vectors(cmm_file, vectors_str, distances_str, angpix):
 
     for subparticle_vector in subparticle_vector_list:
         print "Vector: ",
+        subparticle_vector.normalize()
         subparticle_vector.print_vector()
         print ""
         print "Length: %.2f pixels" % subparticle_vector.distance
