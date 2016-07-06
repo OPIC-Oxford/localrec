@@ -92,7 +92,7 @@ class LocalizedReconstruction():
         sys.exit(2)
 
     def validate(self, args):
-        if not (spawn.find_executable("bimg")):
+        if args.extract_subparticles and not (spawn.find_executable("bimg")):
             self.error("Error: Bsoft not found.",
                        "Make sure Bsoft programs are in $PATH.")
 
