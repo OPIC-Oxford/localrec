@@ -146,7 +146,8 @@ class LocalizedReconstruction():
         symmetry_matrices = matrix_from_symmetry(args.sym)
 
         # Define some conditions to filter subparticles
-        filters = load_filters(args.side, args.top, args.mindist)
+        filters = load_filters(radians(args.side), radians(args.top),
+                               args.mindist)
 
         # Compute all subparticles (included subtracted if masked_map given)
         mdOut = MetaData()
