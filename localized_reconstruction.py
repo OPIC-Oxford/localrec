@@ -143,8 +143,7 @@ def create_subparticles(particle, symmetry_matrices, subparticle_vector_list,
         random.shuffle(symmetry_matrix_ids)
 
     for subparticle_vector in subparticle_vector_list:
-        rot, tilt, psi = euler_from_vector(subparticle_vector)
-        matrix_from_subparticle_vector = matrix_from_euler(rot, tilt, psi)
+        matrix_from_subparticle_vector = subparticle_vector.matrix()
 
         for symmetry_matrix_id in symmetry_matrix_ids:
             # symmetry_matrix_id can be later written out to find out
@@ -154,8 +153,7 @@ def create_subparticles(particle, symmetry_matrices, subparticle_vector_list,
             subpart = particle.clone()
 
             m = matrix_multiply((matrix_multiply(matrix_from_subparticle_vector,
-                                                 symmetry_matrix)),
-                                matrix_particle)
+                                                 symmetry_matrix)), matrix_particle)
 
             if align_subparticles:
                 rotNew, tiltNew, psiNew = euler_from_matrix(m)
@@ -169,9 +167,10 @@ def create_subparticles(particle, symmetry_matrices, subparticle_vector_list,
             subpart.rlnAnglePsi = -rotNew
 
             # subparticle origin
-            x = -m.m[2][0] * subparticle_vector.distance + particle.rlnOriginX
-            y = -m.m[2][1] * subparticle_vector.distance + particle.rlnOriginY
-            z = -m.m[2][2] * subparticle_vector.distance
+            d = subparticle_vector.distance()
+            x = -m.m[2][0] * d + particle.rlnOriginX
+            y = -m.m[2][1] * d + particle.rlnOriginY
+            z = -m.m[2][2] * d
 
             # modify the subparticle defocus paramaters by its z location
             if hasattr(particle, 'rlnDefocusU'):
@@ -282,9 +281,10 @@ def load_vectors(cmm_file, vectors_str, distances_str, angpix):
     for subparticle_vector in subparticle_vector_list:
         print "Vector: ",
         subparticle_vector.normalize()
+        subparticle_vector.compute_matrix()
         subparticle_vector.print_vector()
         print ""
-        print "Length: %.2f pixels" % subparticle_vector.distance
+        print "Length: %.2f pixels" % subparticle_vector.distance()
     print ""
 
     return subparticle_vector_list
