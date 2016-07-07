@@ -8,7 +8,6 @@
 
 import os
 from math import * 
-from vector3 import *
 
 
 class Matrix3:

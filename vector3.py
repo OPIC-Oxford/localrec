@@ -8,6 +8,9 @@
 
 import re
 from math import *
+from euler import euler_from_vector
+from matrix3 import matrix_from_euler
+
 
 class Vector3:
     """define Vector3 class and method to obtain individual vectors from lists with 3 values"""
@@ -18,25 +21,33 @@ class Vector3:
         else:
             self.v = v
 
-        # Initialize the vector distance to zero
-        self.distance = 0.0
+        # Initialize the vector distance to zero and matrix to None
+        self._distance = 0.0
+        self._matrix = None
 
     def set_vector(self, v):
         self.v = v
 
     def set_distance(self, d):
-        self.distance = float(d)
+        self._distance = float(d)
 
     def compute_distance(self):
         self.set_distance(self.length())
+
+    def compute_matrix(self):
+        """ Compute rotation matrix to align Z axis to this vector. """
+        rot, tilt, psi = euler_from_vector(self)
+        self._matrix = matrix_from_euler(rot, tilt, psi)
+
+    def matrix(self):
+        return self._matrix
 
     def print_vector(self):
         x, y, z = self.v
         print("[%.3f,%.3f,%.3f]"%(x, y, z)),
 
     def distance(self):
-        d = self.distance
-        return float(d)
+        return self._distance
 
     def length(self):
         x, y, z = self.v
