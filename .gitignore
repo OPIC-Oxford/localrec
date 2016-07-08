@@ -1,0 +1,12 @@
+
+### Python binaries
+*.pyc
+*.pyo
+
+#### Eclipse and so on
+.project
+.cproject
+.pydevproject
+.classpath
+.idea
+

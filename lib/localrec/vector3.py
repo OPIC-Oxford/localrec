@@ -1,13 +1,33 @@
-#!/usr/bin/env python
-
-# Serban Ilca & Juha T. Huiskonen
-# Oxford Particle Imaging Centre, Division of Structural Biology, University of Oxford
-
-# Created: 2014/06/02 (SI)
-# Modified: 2014/09/12 (JTH)
+# **************************************************************************
+# *
+# * Authors:  Serban Ilca
+# *           Juha T. Huiskonen (juha@strubi.ox.ac.uk)
+# *
+# * Oxford Particle Imaging Centre,
+# * Division of Structural Biology, University of Oxford
+# *
+# * This program is free software; you can redistribute it and/or modify
+# * it under the terms of the GNU General Public License as published by
+# * the Free Software Foundation; either version 2 of the License, or
+# * (at your option) any later version.
+# *
+# * This program is distributed in the hope that it will be useful,
+# * but WITHOUT ANY WARRANTY; without even the implied warranty of
+# * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# * GNU General Public License for more details.
+# *
+# * You should have received a copy of the GNU General Public License
+# * along with this program; if not, write to the Free Software
+# * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
+# * 02111-1307  USA
+# *
+# **************************************************************************
 
 import re
 from math import *
+from euler import euler_from_vector
+from matrix3 import matrix_from_euler
+
 
 class Vector3:
     """define Vector3 class and method to obtain individual vectors from lists with 3 values"""
@@ -18,19 +38,33 @@ class Vector3:
         else:
             self.v = v
 
+        # Initialize the vector distance to zero and matrix to None
+        self._distance = 0.0
+        self._matrix = None
+
     def set_vector(self, v):
         self.v = v
 
     def set_distance(self, d):
-        self.distance = float(d)
+        self._distance = float(d)
+
+    def compute_distance(self):
+        self.set_distance(self.length())
+
+    def compute_matrix(self):
+        """ Compute rotation matrix to align Z axis to this vector. """
+        rot, tilt, psi = euler_from_vector(self)
+        self._matrix = matrix_from_euler(rot, tilt, psi)
+
+    def matrix(self):
+        return self._matrix
 
     def print_vector(self):
         x, y, z = self.v
         print("[%.3f,%.3f,%.3f]"%(x, y, z)),
 
     def distance(self):
-        d = self.distance
-        return float(d)
+        return self._distance
 
     def length(self):
         x, y, z = self.v
@@ -130,3 +164,18 @@ def vectors_from_cmm(input_cmm, angpix):
              continue
 
     return vector_list
+
+
+def vectors_from_string(input_str):
+    """ Function to parse vectors from an string.
+    Our (arbitrary) convention is:
+    x1,y1,z1; x2,y2,z2 ... etc
+    """
+    vectors = []
+
+    for vectorStr in input_str.split(';'):
+        v = Vector3(None)
+        v.set_vector([float(x) for x in vectorStr.split(',')])
+        vectors.append(v)
+
+    return vectors
