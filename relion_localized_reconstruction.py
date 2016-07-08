@@ -2,9 +2,12 @@
 
 # **************************************************************************
 # *
-# * Authors:  Serban Ilca & Juha T. Huiskonen
+# * Authors:  Serban Ilca
+# *           Juha T. Huiskonen (juha@strubi.ox.ac.uk)
+# *           J.M. de la Rosa Trevin
 # *
-# * Oxford Particle Imaging Centre, Division of Structural Biology, University of Oxford
+# * Oxford Particle Imaging Centre,
+# * Division of Structural Biology, University of Oxford
 # *
 # * This program is free software; you can redistribute it and/or modify
 # * it under the terms of the GNU General Public License as published by
@@ -20,9 +23,6 @@
 # * along with this program; if not, write to the Free Software
 # * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
 # * 02111-1307  USA
-# *
-# *  All comments concerning this program package may be sent to the
-# *  e-mail address 'juha@strubi.ox.ac.uk
 # *
 # **************************************************************************
 
