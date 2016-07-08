@@ -25,6 +25,7 @@
 # **************************************************************************
 
 import math
+import sys
 import random
 from itertools import izip
 
@@ -428,7 +429,7 @@ class ProgressBar():
     def __init__(self, width, percent, total):
         # setup toolbar
         self.width = width
-        sys.stdout.write("%s[oo]" % (" " * width))
+        sys.stdout.write("%s>->o" % (" " * width))
         sys.stdout.flush()
         sys.stdout.write("\b" * (width))
         self.count = 0  # total count
@@ -440,8 +441,8 @@ class ProgressBar():
     def notify(self):
         if self.count == int(self.total * self.timer):
             sys.stdout.write("\b" * (self.c + 8))
-            sys.stdout.write("." * self.c)
-            sys.stdout.write("~~(,_,\">")
+            sys.stdout.write("~" * self.c)
+            sys.stdout.write(">))^)>")
             sys.stdout.flush()
             self.timer += self.percent
             self.c += 1
