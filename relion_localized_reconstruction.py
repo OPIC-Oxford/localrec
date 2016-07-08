@@ -1,15 +1,31 @@
 #!/usr/bin/env python
 
-# Serban Ilca & Juha T. Huiskonen
-# Oxford Particle Imaging Centre, Division of Structural Biology, University of Oxford
+# **************************************************************************
+# *
+# * Authors:  Serban Ilca & Juha T. Huiskonen
+# *
+# * Oxford Particle Imaging Centre, Division of Structural Biology, University of Oxford
+# *
+# * This program is free software; you can redistribute it and/or modify
+# * it under the terms of the GNU General Public License as published by
+# * the Free Software Foundation; either version 2 of the License, or
+# * (at your option) any later version.
+# *
+# * This program is distributed in the hope that it will be useful,
+# * but WITHOUT ANY WARRANTY; without even the implied warranty of
+# * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# * GNU General Public License for more details.
+# *
+# * You should have received a copy of the GNU General Public License
+# * along with this program; if not, write to the Free Software
+# * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
+# * 02111-1307  USA
+# *
+# *  All comments concerning this program package may be sent to the
+# *  e-mail address 'juha@strubi.ox.ac.uk
+# *
+# **************************************************************************
 
-# Created:  2014/06/02 (SI)
-# Modified: 2014/10/13 (JTH)
-# Modified: 2015/01/29 (SI)
-# Modified: 2015/08/20 (JTH)
-# Modified: 2015/09/04 (SI)
-# Modified: 2015/09/22 (JTH)
-# Modified: 2016/01/26 (JTH)
 
 import os
 import sys
@@ -17,9 +33,8 @@ import sys
 from distutils import spawn
 import argparse
 
-from localized_reconstruction import *
-from metadata import MetaData
-
+from localrec import *
+from pyrelion import MetaData
 
 
 
