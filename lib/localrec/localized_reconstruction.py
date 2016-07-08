@@ -251,13 +251,9 @@ def create_star(subparticles, star_filename):
     """ Create a Relion style STAR file for extracting (using relion_preprocess)
     all the subparticles for a given particle. """
 
-    parameters = ["rlnMicrographName",
-                  "rlnCoordinateX",
-                  "rlnCoordinateY",
-                  "rlnImageName"
-                  ]
     md = MetaData()
-    md.setLabels(parameters)
+    md.addLabels("rlnMicrographName", "rlnCoordinateX", "rlnCoordinateY",
+                 "rlnImageName")
     md.addData(subparticles)
     md.write(star_filename)
 
