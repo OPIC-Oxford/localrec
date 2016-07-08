@@ -2,6 +2,8 @@
 
 Localized reconstruction scripts and pyRelion library.
 
+Version: 1.1.0
+
 It also requires the following software:
 * Relion 1.4
 * Bsoft 1.9.0
