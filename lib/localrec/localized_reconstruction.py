@@ -273,7 +273,7 @@ def load_vectors(cmm_file, vectors_str, distances_str, angpix):
                                  distances_str.split(',')]
 
         if len(subparticle_distances) != len(subparticle_vector_list):
-            raise Exception("Error: The number of distances doesn't match "
+            raise Exception("Error: The number of distances does not match "
                             "the number of vectors!")
 
         for vector, distance in izip(subparticle_vector_list,
@@ -382,7 +382,7 @@ def extract_subparticles(subpart_size, np, masked_map, output):
     run_command("mv Particles/%s/* %s/" % (output, output))
     run_command("rmdir Particles/" + output)
 
-    print "Finished extracting the sub-particles!\n"
+    print "Finished extracting the subparticles!\n"
 
 
 def write_output_starfiles(labels, mdOut, mdOutSub, output):
