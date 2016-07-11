@@ -49,21 +49,21 @@ class LocalizedReconstruction():
         add = self.parser.add_argument  # shortcut
         addr = required.add_argument
 
-        add('input_star', help="Input star filename with particles.")
+        add('input_star', help="Input STAR filename with particles.")
         add('--split_stacks', action='store_true',
             help="Split particle stacks (needs to be done once).")
         add('--masked_map',
-            help="Map with density that to be subtracted from particle images.")
+            help="Map with density to be subtracted from particle images.")
         add('--create_star', action='store_true',
-            help="Create new STAR files for extracting sub-particles.")
+            help="Create new STAR files for extracting subparticles.")
         add('--extract_subparticles', action='store_true',
-            help="Extract sub-particles from particle images.")
+            help="Extract subparticles from particle images.")
         addr('--angpix', type=float, help="Pixel size (A).", required=True)
         add('--sym', help="Symmetry of the particle.")
         addr('--particle_size', type=int, required=True,
             help="Size of the particle box (pixels).")
         addr('--subparticle_size', type=int, required=True,
-            help="Size of the sub-particle box (pixels).")
+            help="Size of the subparticle box (pixels).")
         add('--randomize', action='store_true',
             help="Randomize the order of the symmetry matrices. \n"
                  "Useful for preventing preferred orientations (default: not).")
@@ -75,14 +75,14 @@ class LocalizedReconstruction():
             help="Align subparticles to the standard orientation.")
         add('--length',
             help="Alternative length of the vector. Use to adjust the "
-                 "sub-particle center (default: length of the given "
+                 "subparticle center (default: length of the given "
                  "vector; A).")
         add('--cmm',
             help="A CMM file defining the location(s) of the subparticle(s) "
                  "(use instead of --vector). Coordinates in Angstrom.")
         add('--unique', type=float, default=-1,
             help="Keep only unique subparticles within angular distance "
-                 "(useful to remove overlapping sub-particles on symmetry axis).")
+                 "(useful to remove overlapping subparticles on symmetry axis).")
         add('--mindist', type=float, default=-1,
             help="Minimum distance between the subparticles in the image "
                  "(all overlapping ones will be discarded; pixels).")
