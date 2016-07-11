@@ -44,7 +44,11 @@ class LocalizedReconstruction():
         self.parser = argparse.ArgumentParser(
             description="Calculates the coordinates and Euler angles for the "
                         "subparticles defined by a vector and symmetry point "
-                        "group.")
+                        "group. Typically the script is run in four parts:"
+                        "1. Split particle stacks."
+                        "2. Create STAR files for extracting subparticles from particle stacks."
+                        "3. Extract subparticles."
+                        "4. Reconstruct a volume from subparticles.")
         required = self.parser.add_argument_group('required arguments')
         add = self.parser.add_argument  # shortcut
         addr = required.add_argument
@@ -52,13 +56,16 @@ class LocalizedReconstruction():
         add('input_star', help="Input STAR filename with particles.")
         add('--split_stacks', action='store_true',
             help="Split particle stacks (needs to be done once).")
-        add('--masked_map',
-            help="Map with density to be subtracted from particle images.")
         add('--create_star', action='store_true',
             help="Create new STAR files for extracting subparticles.")
         add('--extract_subparticles', action='store_true',
             help="Extract subparticles from particle images.")
+        add('--reconstruct', action='store_true',
+            help="Reconstruct a volume from subparticles.")
+        add('--masked_map',
+            help="Map with density to be subtracted from particle images.")
         addr('--angpix', type=float, help="Pixel size (A).", required=True)
+        add('--maxres', type=float, help="Resolution of the reconstruction (A).")
         add('--sym', help="Symmetry of the particle.")
         addr('--particle_size', type=int, required=True,
             help="Size of the particle box (pixels).")
@@ -67,13 +74,10 @@ class LocalizedReconstruction():
         add('--randomize', action='store_true',
             help="Randomize the order of the symmetry matrices. \n"
                  "Useful for preventing preferred orientations (default: not).")
-        add('--relax_symmetry', action='store_true',
-            help="Create one random subparticle for each particle "
-                 "(default: all symmetry related subparticles).")
         add('--vector', help="Vector defining the location of the subparticle.")
         add('--align_subparticles', action='store_true',
             help="Align subparticles to the standard orientation.")
-        add('--length',
+        add('--length', type=float,
             help="Alternative length of the vector. Use to adjust the "
                  "subparticle center (default: length of the given "
                  "vector; A).")
@@ -173,7 +177,6 @@ class LocalizedReconstruction():
                                                    symmetry_matrices,
                                                    subparticle_vector_list,
                                                    particle_size,
-                                                   args.relax_symmetry,
                                                    args.randomize,
                                                    "subparticles", args.unique,
                                                    len(mdOut),
@@ -194,6 +197,8 @@ class LocalizedReconstruction():
 
         write_output_starfiles(md.getLabels(), mdOut, mdOutSub, output)
 
+        if args.reconstruct:
+            reconstruct_subparticles(args.np, mdOutSub, output)
 
 if __name__ == "__main__":    
     LocalizedReconstruction().main()
