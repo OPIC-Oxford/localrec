@@ -95,7 +95,7 @@ class LocalizedReconstruction():
         add('--output', default='subparticles',
             help="Output root for results.")
         add('--j', type=int, default=8, help="Number of threads.")
-        add('--np', type=int, default=4, help="Number of MPI procs.")
+        add('--np', type=int, default=1, help="Number of MPI procs.")
 
     def usage(self):
         self.parser.print_help()
