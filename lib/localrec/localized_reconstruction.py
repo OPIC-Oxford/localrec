@@ -122,7 +122,7 @@ def angles_to_degrees(particle):
 
 
 def create_subparticles(particle, symmetry_matrices, subparticle_vector_list,
-                        part_image_size, relax_symmetry, randomize, output,
+                        part_image_size, randomize, output,
                         unique, subparticles_total, align_subparticles,
                         subtract_masked_map, do_create_star, filters):
     """ Obtain all subparticles from a given particle and set
@@ -207,10 +207,6 @@ def create_subparticles(particle, symmetry_matrices, subparticle_vector_list,
                 subparticles.append(subpart)
                 subpart_id += 1
                 subparticles_total += 1
-
-            if relax_symmetry:
-                # take just the first (random) one and finish
-                break
 
     if subtract_masked_map:
         subtracted = clone_subtracted_subparticles(subparticles)
@@ -388,7 +384,7 @@ def extract_subparticles(subpart_size, np, masked_map, output):
 def write_output_starfiles(labels, mdOut, mdOutSub, output):
 
     labels.extend(['rlnCoordinateX', 'rlnCoordinateY', 'rlnMicrographName'])
-    print "Writing output star files."
+    print "Writing output STAR files."
 
     starfile1 = output + ".star"
     print "   Parameters for subparticles: \n      *** %s **" % starfile1
@@ -408,6 +404,28 @@ def write_output_starfiles(labels, mdOut, mdOutSub, output):
         _writeMd(mdOutSub, starfile2)
 
     print "The output files have been written!\n"
+
+
+def reconstruct_subparticles(np, mdOutSub, output):
+
+    print "Reconstructing subparticles."
+    recfile = output + ".mrc"
+
+    if np == 1:
+        cmd = 'relion_reconstruct '
+    else:
+        cmd = 'mpirun -np %s relion_reconstruct_mpi' % np
+
+    def run_reconstruct(suffix=''):
+        args = ('--ctf --i %s%s.star --o subparticle%s_3d.mrc ') % (output, suffix, suffix)
+        run_command(cmd + args)
+
+    run_reconstruct()
+
+    if len(mdOutSub):
+        run_reconstruct('_subtracted')
+
+    print "Subparticles have been reconsructed!\n"
 
 
 def run_command(command, output=""):
