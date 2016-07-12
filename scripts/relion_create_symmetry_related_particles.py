@@ -76,27 +76,25 @@ class CreateSymmetryRelatedParticles():
         symmetry_matrices = matrix_from_symmetry(args.sym)
 
         for particle in md:
+            angles_to_radians(particle)
+            rot = -particle.rlnAnglePsi
+            tilt = -particle.rlnAngleTilt
+            psi = -particle.rlnAngleRot
+            matrix_particle = matrix_from_euler(rot, tilt, psi)
+
             for symmetry_matrix in symmetry_matrices:
-                rot = -particle.rlnAnglePsi
-                tilt = -particle.rlnAngleTilt
-                psi = -particle.rlnAngleRot
-                matrix_particle = matrix_from_euler(rot, tilt, psi)
-
-                new_particle = particle.clone()
-
                 m = matrix_multiply(symmetry_matrix, matrix_particle)
-
                 rotNew, tiltNew, psiNew = euler_from_matrix(m)
 
+                new_particle = particle.clone()
                 new_particle.rlnAngleRot = -psiNew
                 new_particle.rlnAngleTilt = -tiltNew
                 new_particle.rlnAnglePsi = -rotNew
+                angles_to_degrees(new_particle)
                 new_particles.append(new_particle)
-
 
         mdOut.addData(new_particles)
         mdOut.write(args.output)
-
 
         print "All done!"
 
