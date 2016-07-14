@@ -343,7 +343,9 @@ def create_initial_stacks(input_star, particle_size, angpix,
         run_command("bsplit -digits 6 -first 1 %s.mrcs:mrc %s.mrc"
                     % (outputParticles, outputParticles))
 
-        print "Finished splitting the particle stack!"
+	run_command("rm -f %s.mrcs" % (outputParticles))
+
+        print "Finished creating and splitting the particle stack!"
         print " "
 
     if split_stacks:
@@ -372,8 +374,9 @@ def extract_subparticles(subpart_size, np, masked_map, output):
         args = ('--extract --o subparticles --extract_size %s --coord_files '
                 '"%s/particles%s_??????.star"') % (subpart_size, output, suffix)
         run_command(cmd + args)
-        run_command('mv subparticles.star %s%s_preprocess.star'
+        run_command("mv subparticles.star %s%s_preprocess.star"
                     % (output, suffix))
+	run_command("rm -f %s/particles%s_??????.mrc" % (output, suffix))
 
     run_extract()  # Run extraction without subtracted density
 
