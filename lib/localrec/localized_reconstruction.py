@@ -262,6 +262,7 @@ def load_vectors(cmm_file, vectors_str, distances_str, angpix):
     """ Load subparticle vectors either from Chimera CMM file or from
     a vectors string. Distances can also be specified for each vector
     in the distances_str. """
+
     if cmm_file:
         subparticle_vector_list = vectors_from_cmm(cmm_file, angpix)
     else:
@@ -286,7 +287,7 @@ def load_vectors(cmm_file, vectors_str, distances_str, angpix):
         for vector in subparticle_vector_list:
             vector.compute_distance()
 
-    print "Creating subparticles using vectors:"
+    print "Using vectors:"
 
     for subparticle_vector in subparticle_vector_list:
         print "Vector: ",
