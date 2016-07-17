@@ -111,6 +111,10 @@ class LocalizedReconstruction():
             self.error("Error: Bsoft not found.",
                        "Make sure Bsoft programs are in $PATH.")
 
+        if not (spawn.find_executable("scipion")):
+            self.error("Error: Scipion not found.",
+                       "Make sure scipion is in $PATH.")
+
         if not (spawn.find_executable("relion_refine")):
             self.error("Error: Relion not found.",
                        "Make sure Relion programs are in $PATH.")
