@@ -340,8 +340,10 @@ def create_initial_stacks(input_star, particle_size, angpix,
         run_command("relion_project" + args %
                     (maskedFile, outputParticles, input_star, angpix))
 
-        run_command("bsplit -digits 6 -first 1 %s.mrcs:mrc %s.mrc"
-                    % (outputParticles, outputParticles))
+        #run_command("bsplit -digits 6 -first 1 %s.mrcs:mrc %s.mrc"
+        #            % (outputParticles, outputParticles))
+        run_command("scipion xmipp_image_convert -i %s.mrcs --oroot %s_:mrc" % (outputParticles, outputParticles))
+
 
 	run_command("rm -f %s.mrcs" % (outputParticles))
 
