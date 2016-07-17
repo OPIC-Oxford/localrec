@@ -262,6 +262,7 @@ def load_vectors(cmm_file, vectors_str, distances_str, angpix):
     """ Load subparticle vectors either from Chimera CMM file or from
     a vectors string. Distances can also be specified for each vector
     in the distances_str. """
+
     if cmm_file:
         subparticle_vector_list = vectors_from_cmm(cmm_file, angpix)
     else:
@@ -286,7 +287,7 @@ def load_vectors(cmm_file, vectors_str, distances_str, angpix):
         for vector in subparticle_vector_list:
             vector.compute_distance()
 
-    print "Creating subparticles using vectors:"
+    print "Using vectors:"
 
     for subparticle_vector in subparticle_vector_list:
         print "Vector: ",
@@ -339,10 +340,14 @@ def create_initial_stacks(input_star, particle_size, angpix,
         run_command("relion_project" + args %
                     (maskedFile, outputParticles, input_star, angpix))
 
-        run_command("bsplit -digits 6 -first 1 %s.mrcs:mrc %s.mrc"
-                    % (outputParticles, outputParticles))
+        #run_command("bsplit -digits 6 -first 1 %s.mrcs:mrc %s.mrc"
+        #            % (outputParticles, outputParticles))
+        run_command("scipion xmipp_image_convert -i %s.mrcs --oroot %s_:mrc" % (outputParticles, outputParticles))
 
-        print "Finished splitting the particle stack!"
+
+	run_command("rm -f %s.mrcs" % (outputParticles))
+
+        print "Finished creating and splitting the particle stack!"
         print " "
 
     if split_stacks:
@@ -371,8 +376,9 @@ def extract_subparticles(subpart_size, np, masked_map, output):
         args = ('--extract --o subparticles --extract_size %s --coord_files '
                 '"%s/particles%s_??????.star"') % (subpart_size, output, suffix)
         run_command(cmd + args)
-        run_command('mv subparticles.star %s%s_preprocess.star'
+        run_command("mv subparticles.star %s%s_preprocess.star"
                     % (output, suffix))
+	run_command("rm -f %s/particles%s_??????.mrc" % (output, suffix))
 
     run_extract()  # Run extraction without subtracted density
 
