@@ -320,6 +320,32 @@ def load_filters(side, top, mindist):
     return filters
 
 
+def scipion_split_stack(inputStack, outputTemplate, deleteStack):
+    """ Read a stack of particles and write as individual images.
+     This function requires will run within Scipion Python environment
+    """
+    import pyworkflow.utils as pwutils
+    from pyworkflow.em import ImageHandler
+    ih = ImageHandler()
+    _, _, _, n = ih.getDimensions(inputStack)
+    for i in range(n):
+        ih.convert((i, inputStack), outputTemplate % (i+1))
+
+    if deleteStack:
+        pwutils.cleanPath(inputStack)
+
+
+def scipion_split_star(inputStar, outputTemplate):
+    """ Read image names from an star file and write as individual files.
+     This function requires will run within Scipion Python environment
+    """
+    from pyworkflow.em import ImageHandler
+    ih = ImageHandler()
+    md = MetaData(inputStar)
+    for i, particle in enumerate(md):
+        ih.convert(particle.rlnImageName, outputTemplate % (i+1))
+
+
 def create_initial_stacks(input_star, particle_size, angpix,
                           split_stacks, masked_map, output):
     """ Create initial particle stacks (and star files) to be used
@@ -327,38 +353,27 @@ def create_initial_stacks(input_star, particle_size, angpix,
     If the subtracted_map is passed, another stack with subtracted
     particles will be created. """
 
-    def create_stack(suffix, maskedFile, extra=''):
-        print "Creating and splitting the particle stack..."
-        if suffix:
-            print(" Creating a stack from which the projections of the masked "
-                  "particle have been subtracted...")
-        else:
-            print " Creating a normal stack from which nothing is subtracted..."
-
-        outputParticles = "%s/particles%s" % (output, suffix)
-        args = " --i %s --o %s --ang %s --subtract_exp --angpix %s " + extra
-        run_command("relion_project" + args %
-                    (maskedFile, outputParticles, input_star, angpix))
-
-        #run_command("bsplit -digits 6 -first 1 %s.mrcs:mrc %s.mrc"
-        #            % (outputParticles, outputParticles))
-        run_command("scipion xmipp_image_convert -i %s.mrcs --oroot %s_:mrc" % (outputParticles, outputParticles))
-
-
-	run_command("rm -f %s.mrcs" % (outputParticles))
-
-        print "Finished creating and splitting the particle stack!"
-        print " "
+    print "Creating and splitting the particle stack..."
 
     if split_stacks:
-        maskedFile = 'dummy_mask.mrc'
-        run_command("beditimg -create %s,%s,%s -fill 0 %s"
-                    % (particle_size, particle_size, particle_size, maskedFile))
-        create_stack('', maskedFile)
-        run_command("rm -f %s" % maskedFile)
+        print " Creating a normal stack from which nothing is subtracted..."
+        outputTemplate = "%s/particles_%06d.mrc" % output
+        scipion_split_star(input_star, outputTemplate)
 
     if masked_map:
-        create_stack('_subtracted', masked_map, '--ctf')
+        print(" Creating a stack from which the projections of the masked "
+              "particle have been subtracted...")
+        outputParticles = "%s/particles_subtracted" % output
+        args = " --i %s --o %s --ang %s --subtract_exp --angpix --ctf "
+        run_command("relion_project" + args %
+                    (masked_map, outputParticles, input_star, angpix))
+
+        scipion_split_stack("%s.mrcs" % outputParticles,
+                            "%s_%06d.mrc" % outputParticles,
+                            deleteStack=True)
+
+    print "Finished creating and splitting the particle stack!"
+    print " "
 
 
 def extract_subparticles(subpart_size, np, masked_map, output):
