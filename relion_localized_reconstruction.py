@@ -103,24 +103,24 @@ class LocalizedReconstruction():
 
     def error(self, *msgs):
         self.usage()
-        print "Error: " + '\n'.join(msgs)
+        print "\nError: " + '\n'.join(msgs)
         print " "
         sys.exit(2)
 
     def validate(self, args):
         if not (spawn.find_executable("scipion")):
-            self.error("Error: Scipion not found.",
+            self.error("Scipion not found.",
                        "Make sure Scipion is in $PATH.")
 
         if not (spawn.find_executable("relion_refine")):
-            self.error("Error: Relion not found.",
+            self.error("Relion not found.",
                        "Make sure Relion programs are in $PATH.")
 
         if len(sys.argv) == 1:
-            self.error("Error: No input file given.")
+            self.error("No input file given.")
 
         if not os.path.exists(args.input_star):
-            self.error("Error: Input file '%s' not found."
+            self.error("\nInput file '%s' not found."
                        % args.input_star)
 
     def main(self):
@@ -146,12 +146,16 @@ class LocalizedReconstruction():
         if args.prepare_particles:
             print "Preparing particles for extracting subparticles."
             create_initial_stacks(args.input_star, args.angpix, args.masked_map, output)
-            #particles_star = output + "/particles.star"
             print "\nFinished preparing the particles!\n"
 
-        particles_star = args.input_star
-
         if args.create_subparticles:
+            particles_star = output + "/particles.star"
+
+            if not os.path.exists(output + "/particles.star"):
+                self.error("Input file '%s not found. "
+                           "Run the script first with --prepare_particles option."
+                           % particles_star)
+
             md = MetaData(particles_star)
             print "Creating subparticles..."
 
@@ -176,20 +180,22 @@ class LocalizedReconstruction():
                                                        particle_size,
                                                        args.relax_symmetry,
                                                        args.randomize,
-                                                       "subparticles", args.unique,
+                                                       output, args.unique,
                                                        len(mdOut),
                                                        args.align_subparticles,
                                                        subtract_masked_map,
                                                        filters)
+
 
                 mdOut.addData(subparticles)
                 mdOutSub.addData(subtracted)
 
                 progressbar.notify()
 
-            print "\nFinished creating the subparticles!\n"
-
+            md.removeLabels('rlnOriginZ', 'rlnOriginalName')
             write_output_starfiles(md.getLabels(), mdOut, mdOutSub, output)
+
+            print "\nFinished creating the subparticles!\n"
 
         if args.extract_subparticles:
             print "Extracting subparticles..."
