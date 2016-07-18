@@ -385,7 +385,7 @@ def create_initial_stacks(input_star, angpix, masked_map, output):
 
         scipion_split_stack(input_star, "%s.mrcs" % outputParticles,
                             "%s" % outputParticles,
-                            deleteStack=False)
+                            deleteStack=True)
 
 
 def extract_subparticles(subpart_size, np, masked_map, output):
