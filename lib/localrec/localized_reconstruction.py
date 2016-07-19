@@ -319,60 +319,52 @@ def load_filters(side, top, mindist):
     return filters
 
 
-def scipion_split_stack(inputStar, inputStack, outputTemplate, deleteStack):
-    """ Read a stack of particles and write as individual images.
-    This function requires will run within Scipion Python environment. """
+def scipion_split_particle_stacks(inputStar, inputStack, output, filename_prefix, deleteStack):
+    """ Read a STAR file with particles and write as individual images.
+    If a stack of images is given, use these instead of the images from the STAR file.
+    Also write a new STAR file pointing to these images.
+    This function requires that the script is run within Scipion Python environment. """
 
     import pyworkflow.utils as pwutils
     from pyworkflow.em import ImageHandler
     ih = ImageHandler()
     md = MetaData(inputStar)
+    md.addLabels('rlnOriginalName')
 
-    #_, _, _, n = ih.getDimensions(inputStack)
+    # Initialize progress bar
+    progressbar = ProgressBar(width=70, percent=0.01, total=len(md))
 
-    #for i in range(n):
-    #    ih.convert((i+1, inputStack), '%s_%06d.mrc' % (outputTemplate, i+1))
+    for i, particle in enumerate(md, start=1):
+        if inputStack:
+            ih.convert((i, inputStack), '%s/%s_%06d.mrc' % (output, filename_prefix, i))
+            particle.rlnOriginalName = '%s/%06d@%s' %(inputstack, i, inputStack)
+        else:
+            ih.convert(particle.rlnImageName, '%s/%s_%06d.mrc' % (output, filename_prefix, i))
+            particle.rlnOriginalName = particle.rlnImageName
+            particle.rlnImageName = '%s_%06d.mrc' % (basename(outputTemplate), i)
 
-    for i, particle in enumerate(md):
-        ih.convert((i+1, inputStack), '%s_%06d.mrc' % (outputTemplate, i+1))
-        particle.rlnOriginalName = particle.rlnImageName
-        particle.rlnImageName = '%s_%06d.mrc' % (basename(outputTemplate), i + 1)
+        progressbar.notify()
 
     md.write("%s.star" % (outputTemplate))
 
-    if deleteStack:
+    if inputStack and deleteStack:
         pwutils.cleanPath(inputStack)
-
-
-def scipion_split_star(inputStar, output):
-    """ Read image names from a STAR file and write as individual files.
-    Also write a new STAR file pointing to these images.
-    This function requires will run within Scipion Python environment. """
-
-    from pyworkflow.em import ImageHandler
-    ih = ImageHandler()
-    md = MetaData(inputStar)
-    md.addLabels('rlnOriginalName')
-    for i, particle in enumerate(md):
-        ih.convert(particle.rlnImageName, '%s/particles_%06d.mrc' % (output, i+1))
-        particle.rlnOriginalName = particle.rlnImageName
-        particle.rlnImageName = 'particles_%06d.mrc' % (i+1)
-
-    md.write("%s/particles.star" % (output))
 
 
 def create_initial_stacks(input_star, angpix, masked_map, output):
     """ Create initial particle stacks (and STAR files) to be used
-    for extraction of subparticles. If the subtracted_map is passed,
+    for extraction of subparticles. If the masked_map is passed,
     another stack with subtracted particles will be created. """
 
     print " Creating particle images from which nothing is subtracted..."
-    scipion_split_star(input_star, output)
+    scipion_split_particle_stacks(input_star, None, output, 'particles', deleteStack=False)
 
     if masked_map:
         print(" Creating particle images from which the projections of the masked "
               "particle reconstruction have been subtracted...")
+
         outputParticles = "%s/particles_subtracted" % output
+
         md = MetaData(input_star)
         args = " --i %s --o %s --ang %s --subtract_exp --angpix %s "
         if "rlnDefocusU" in md.getLabels():
@@ -383,9 +375,7 @@ def create_initial_stacks(input_star, angpix, masked_map, output):
         run_command("relion_project" + args %
                     (masked_map, outputParticles, input_star, angpix))
 
-        scipion_split_stack(input_star, "%s.mrcs" % outputParticles,
-                            "%s" % outputParticles,
-                            deleteStack=True)
+        scipion_split_particle_stacks(input_star, outputParticles, output, 'particles_subtracted', deleteStack=True)
 
 
 def extract_subparticles(subpart_size, np, masked_map, output):
