@@ -338,7 +338,7 @@ def scipion_split_particle_stacks(inputStar, inputStack, output, filename_prefix
         outputImageName = '%s/%s_%06d.mrc' % (output, filename_prefix, i)
 
         if inputStack:
-            ih.convert((i, inputStack), outputImageName)
+            ih.convert((i, inputStack), outputImageName )
             particle.rlnOriginalName = '%s/%06d@%s' %(output, i, inputStack)
         else:
             ih.convert(particle.rlnImageName, outputImageName)
@@ -367,7 +367,7 @@ def create_initial_stacks(input_star, angpix, masked_map, output):
         print(" Creating particle images from which the projections of the masked "
               "particle reconstruction have been subtracted...")
 
-        outputParticles = "%s/particles_subtracted" % output
+        subtractedStackRoot = "%s/particles_subtracted" % output
 
         md = MetaData(input_star)
         args = " --i %s --o %s --ang %s --subtract_exp --angpix %s "
@@ -377,10 +377,12 @@ def create_initial_stacks(input_star, angpix, masked_map, output):
             print ("\nWarning: no CTF info found in %s!\n"
                    "The subtraction will be performed without CTF correction.\n" % input_star)
         run_command("relion_project" + args %
-                    (masked_map, outputParticles, input_star, angpix))
-        run_command("mv %s.star %s_orig.star" % (outputParticles, outputParticles))
+                    (masked_map, subtractedStackRoot, input_star, angpix))
+        run_command("mv %s.star %s_orig.star" % (subtractedStackRoot, subtractedStackRoot))
 
-        scipion_split_particle_stacks(input_star, outputParticles, output, 'particles_subtracted', deleteStack=True)
+        subtractedStack = subtractedStackRoot + '.mrc'
+
+        scipion_split_particle_stacks(input_star, subtractedStack, output, 'particles_subtracted', deleteStack=True)
 
 
 def extract_subparticles(subpart_size, np, masked_map, output):
