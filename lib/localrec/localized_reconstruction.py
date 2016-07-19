@@ -397,7 +397,7 @@ def extract_subparticles(subpart_size, np, masked_map, output):
     def run_extract(suffix=''):
         args = ('--extract --o subparticles --extract_size %s --coord_files '
                 '"%s/particles%s_??????.star"') % (subpart_size, output, suffix)
-        run_command(cmd + args)
+        run_command(cmd + args, "/dev/null")
         run_command("rm subparticles.star")
 	run_command("rm -f %s/particles%s_??????.mrc" % (output, suffix))
 
@@ -413,7 +413,7 @@ def extract_subparticles(subpart_size, np, masked_map, output):
 def write_output_starfiles(labels, mdOut, mdOutSub, output):
 
     labels.extend(['rlnCoordinateX', 'rlnCoordinateY', 'rlnMicrographName'])
-    print "Writing output STAR files."
+    print "\nWriting output STAR files."
 
     starfile1 = output + ".star"
     print " Parameters for subparticles: \n      *** %s **" % starfile1
