@@ -335,13 +335,16 @@ def scipion_split_particle_stacks(inputStar, inputStack, output, filename_prefix
     progressbar = ProgressBar(width=70, percent=0.01, total=len(md))
 
     for i, particle in enumerate(md, start=1):
+        outputImageName = '%s/%s_%06d.mrc' % (output, filename_prefix, i)
+
         if inputStack:
-            ih.convert((i, inputStack), '%s/%s_%06d.mrc' % (output, filename_prefix, i))
-            particle.rlnOriginalName = '%s/%06d@%s' %(inputstack, i, inputStack)
+            ih.convert((i, inputStack), outputImageName)
+            particle.rlnOriginalName = '%s/%06d@%s' %(output, i, inputStack)
         else:
-            ih.convert(particle.rlnImageName, '%s/%s_%06d.mrc' % (output, filename_prefix, i))
+            ih.convert(particle.rlnImageName, outputImageName)
             particle.rlnOriginalName = particle.rlnImageName
-            particle.rlnImageName = '%s_%06d.mrc' % (basename(outputTemplate), i)
+
+        particle.rlnImageName = outputImageName
 
         progressbar.notify()
 
