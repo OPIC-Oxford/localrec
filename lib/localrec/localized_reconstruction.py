@@ -380,7 +380,7 @@ def create_initial_stacks(input_star, angpix, masked_map, output):
                     (masked_map, subtractedStackRoot, input_star, angpix))
         run_command("mv %s.star %s_orig.star" % (subtractedStackRoot, subtractedStackRoot))
 
-        subtractedStack = subtractedStackRoot + '.mrc'
+        subtractedStack = subtractedStackRoot + '.mrcs'
 
         scipion_split_particle_stacks(input_star, subtractedStack, output, 'particles_subtracted', deleteStack=True)
 
