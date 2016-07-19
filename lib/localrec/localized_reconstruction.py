@@ -348,6 +348,7 @@ def scipion_split_particle_stacks(inputStar, inputStack, output, filename_prefix
 
         progressbar.notify()
 
+    print("\n")
     md.write("%s/%s.star" % (output, filename_prefix))
 
     if inputStack and deleteStack:
@@ -377,6 +378,7 @@ def create_initial_stacks(input_star, angpix, masked_map, output):
                    "The subtraction will be performed without CTF correction.\n" % input_star)
         run_command("relion_project" + args %
                     (masked_map, outputParticles, input_star, angpix))
+        run_command("mv %s.star %s_orig.star" % (outputParticles, outputParticles))
 
         scipion_split_particle_stacks(input_star, outputParticles, output, 'particles_subtracted', deleteStack=True)
 
