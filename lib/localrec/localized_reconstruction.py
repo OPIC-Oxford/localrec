@@ -348,7 +348,7 @@ def scipion_split_particle_stacks(inputStar, inputStack, output, filename_prefix
 
         progressbar.notify()
 
-    md.write("%s.star" % (outputTemplate))
+    md.write("%s/%s.star" % (output, filename_prefix))
 
     if inputStack and deleteStack:
         pwutils.cleanPath(inputStack)
@@ -439,12 +439,13 @@ def run_command(command, output=""):
 
 
 class ProgressBar():
-    """ Implements a simple command line progress bar"""
+    """ Implements a simple command line progress bar.
+    Still need fixing, now the shark swims too far..."""
 
     def __init__(self, width, percent, total):
         # setup toolbar
         self.width = width
-        sys.stdout.write("%s>->o" % (" " * width))
+        sys.stdout.write("%s>->o" % ("~" * width))
         sys.stdout.flush()
         sys.stdout.write("\b" * (width))
         self.count = 0  # total count
@@ -457,7 +458,7 @@ class ProgressBar():
         if self.count == int(self.total * self.timer):
             sys.stdout.write("\b" * (self.c + 8))
             sys.stdout.write("~" * self.c)
-            sys.stdout.write(">))^)>")
+            sys.stdout.write("><))^)>")
             sys.stdout.flush()
             self.timer += self.percent
             self.c += 1
