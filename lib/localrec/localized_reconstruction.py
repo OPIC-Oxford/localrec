@@ -129,7 +129,7 @@ def create_subparticles(particle, symmetry_matrices, subparticle_vector_list,
     """ Obtain all subparticles from a given particle and set
     the properties of each such subparticle. """
 
-    part_filename = splitext(particle.rlnImageName)[0]
+    part_filename = splitext(basename(particle.rlnImageName))[0]
 
 
 
