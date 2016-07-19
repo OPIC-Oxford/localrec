@@ -399,7 +399,7 @@ def extract_subparticles(subpart_size, np, masked_map, output):
                 '"%s/particles%s_??????.star"') % (subpart_size, output, suffix)
         run_command(cmd + args, "/dev/null")
         run_command("rm subparticles.star")
-	run_command("find ./%s -name \"particles%s_??????.mrc\" -print0 | xargs -0 rm " % (output, suffix))
+	run_command("find %s -name \"particles%s_??????.mrc\" -print0 | xargs -0 rm " % (output, suffix))
 
     run_extract()  # Run extraction without subtracted density
 
