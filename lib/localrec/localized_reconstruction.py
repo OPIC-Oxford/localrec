@@ -401,7 +401,9 @@ def extract_subparticles(subpart_size, np, masked_map, output, deleteParticles):
         print(" Cleaning up temporary files...")
         run_command("rm subparticles.star")
         if deleteParticles:
-            run_command("cd %s; find . -name \"particles%s_??????.mrc\" -print0 | xargs -0 rm ; cd .." % (output, suffix))
+            #run_command("cd %s; find . -name \"particles%s_??????.mrc\" -print0 | xargs -0 rm ; cd .." % (output, suffix))
+            run_command(
+                "find %s/ -name 'particles%s_??????.mrc' -print0 | xargs -0 rm " % (output, suffix))
 
     run_extract()  # Run extraction without subtracted density
 
@@ -409,7 +411,9 @@ def extract_subparticles(subpart_size, np, masked_map, output, deleteParticles):
         run_extract('_subtracted')
 
     print(" Moving subparticles to the output directory...")
-    run_command("mv Particles/%s/* %s/" % (output, output))
+
+    run_command("find Particles/%s/ -name '*.*' | xargs mv --target-directory=%s/" % (output, output))
+    # run_command("mv Particles/%s/* %s/" % (output, output))
     run_command("rmdir Particles/" + output)
 
 
