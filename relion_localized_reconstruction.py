@@ -199,7 +199,7 @@ class LocalizedReconstruction():
 
         if args.extract_subparticles:
             print "Extracting subparticles..."
-            extract_subparticles(subpart_image_size, args.np, args.masked_map, output)
+            extract_subparticles(subpart_image_size, args.np, args.masked_map, output, deleteParticles=True)
             print "\nFinished extracting the subparticles!\n"
 
 if __name__ == "__main__":    
