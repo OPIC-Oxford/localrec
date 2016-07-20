@@ -385,7 +385,7 @@ def create_initial_stacks(input_star, angpix, masked_map, output):
         scipion_split_particle_stacks(input_star, subtractedStack, output, 'particles_subtracted', deleteStack=True)
 
 
-def extract_subparticles(subpart_size, np, masked_map, output):
+def extract_subparticles(subpart_size, np, masked_map, output, deleteParticles):
     """ Extract subparticles images from each particle
     (Using 'relion_preprocess' as if the particle was a micrograph. """
 
@@ -398,14 +398,17 @@ def extract_subparticles(subpart_size, np, masked_map, output):
         args = ('--extract --o subparticles --extract_size %s --coord_files '
                 '"%s/particles%s_??????.star"') % (subpart_size, output, suffix)
         run_command(cmd + args, "/dev/null")
+        print(" Cleaning up temporary files...")
         run_command("rm subparticles.star")
-        run_command("cd %s; find . -name \"particles%s_??????.mrc\" -print0 | xargs -0 rm ; cd .." % (output, suffix))
+        if deleteParticles:
+            run_command("cd %s; find . -name \"particles%s_??????.mrc\" -print0 | xargs -0 rm ; cd .." % (output, suffix))
 
     run_extract()  # Run extraction without subtracted density
 
     if masked_map:
         run_extract('_subtracted')
 
+    print(" Moving subparticles to the output directory...")
     run_command("mv Particles/%s/* %s/" % (output, output))
     run_command("rmdir Particles/" + output)
 
@@ -449,7 +452,7 @@ class ProgressBar():
     def __init__(self, width, percent, total):
         # setup toolbar
         self.width = width
-        sys.stdout.write("%s>->o" % ("~" * width))
+        sys.stdout.write("%s>->o" % ("_" * width))
         sys.stdout.flush()
         sys.stdout.write("\b" * (width))
         self.count = 0  # total count
