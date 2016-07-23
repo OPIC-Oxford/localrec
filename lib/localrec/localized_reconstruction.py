@@ -231,6 +231,37 @@ def create_subparticles(particle, symmetry_matrices, subparticle_vector_list,
     return subparticles, subtracted
 
 
+def create_symmetry_related_particles(particle, symmetry_matrices,
+                                      keep_one=False):
+    """ Return all related particles from the given symmetry matrices.
+    If keep_one is True, randomly select only one of these equivalent
+    particles.
+    NOTE: Input particle should already contains angles in radians.
+    """
+    new_particles = []
+
+    rot = -particle.rlnAnglePsi
+    tilt = -particle.rlnAngleTilt
+    psi = -particle.rlnAngleRot
+    matrix_particle = matrix_from_euler(rot, tilt, psi)
+
+    for symmetry_matrix in symmetry_matrices:
+        m = matrix_multiply(symmetry_matrix, matrix_particle)
+        rotNew, tiltNew, psiNew = euler_from_matrix(m)
+
+        new_particle = particle.clone()
+        new_particle.rlnAngleRot = -psiNew
+        new_particle.rlnAngleTilt = -tiltNew
+        new_particle.rlnAnglePsi = -rotNew
+        angles_to_degrees(new_particle)
+        new_particles.append(new_particle)
+
+    if keep_one:
+        new_particles = random.sample(new_particles, 1)
+
+    return new_particles
+
+
 def clone_subtracted_subparticles(subparticles):
     subparticles_subtracted = []
 
