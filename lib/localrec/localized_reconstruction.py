@@ -442,9 +442,21 @@ def write_output_starfiles(labels, mdOut, mdOutSub, output):
 
 def split_star_to_random_subsets(inputStar):
     md = MetaData(inputStar+'.star')
+    mdHalf1 = MetaData()
+    mdHalf2 = MetaData()
+
+    half1Star = inputStar+'_half1'
+    half2Star = inputStar+'_half2'
+
     for particle in md:
-        half1Star = inputStar
-        half2Star = inputStar
+        if particle.rlnRandomSubset%2==0:
+            mdHalf1.addData(particle)
+        if particle.rlnRandomSubset%2==1:
+            mdHalf2.addData(particle)
+
+    mdHalf1.write(half1Star+'.star')
+    mdHalf2.write(half2Star+'.star')
+
     return half1Star, half2Star
 
 
