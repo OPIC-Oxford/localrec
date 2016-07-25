@@ -441,37 +441,43 @@ def write_output_starfiles(labels, mdOut, mdOutSub, output):
 
 
 def split_star_to_random_subsets(inputStar):
-    half1Star = inputStar
-    half2Star = inputStar
+    md = MetaData(inputStar+'.star')
+    for particle in md:
+        half1Star = inputStar
+        half2Star = inputStar
     return half1Star, half2Star
 
 
-def reconstruct_subparticles(threads, output, maxres):
+def reconstruct_subparticles(threads, output, maxres, sym):
     """ Reconstruct subparticles. Also create two half maps using random subsets. """
-
-    args = ""
 
     def run_reconstruct(input, suffix='', extraArgs=''):
         cmd = ('relion_reconstruct ')
-        args = ('--j %s %s --o %s%s.mrc %s.star') % (threads, extraArgs, output, suffix, input)
+        args = ('--sym %s --j %s %s --o %s%s.mrc --i %s.star') % (sym, threads, extraArgs, input, suffix, input)
         run_command(cmd + args)
 
+    for input in [output, output+'_subtracted']:
+        args = ""
+        inputStarName = input + '.star'
+        if os.path.exists(inputStarName):
+            md = MetaData(inputStarName)
 
-    for inputStar in [output, output + '_subtracted']:
-        md = MetaData(inputStar+'.star')
+            if "rlnDefocusU" in md.getLabels():
+                args = args + "--ctf "
+            else:
+                print ("\nWarning: no CTF info found in %s!\n"
+                       "The reconstruction will be performed without CTF correction.\n" % inputStarName)
 
-        if "rlnDefocusU" in md.getLabels():
-            args = args + "--ctf "
+            # reconstruct random halves to Nyquist frequency
+            if "rlnRandomSubset" in md.getLabels():
+                half1Star, half2Star = split_star_to_random_subsets(input)
+                run_reconstruct(half1Star, "_half1_class001_unfil", args)
+                run_reconstruct(half2Star, "_half2_class001_unfil", args)
 
-        # reconstruct random halves to Nyquist frequency
-        if "rlnRandomSubset" in md.getLabels():
-            half1Star, half2Star = split_star_to_random_subsets(inputStar)
-            run_reconstruct(half1Star, "_half1_class001_unfil", args)
-            run_reconstruct(half2Star, "_half2_class001_unfil", args)
-
-        # reconstruct the map to maximum resolution given
-        args = args + "--maxres %s " % maxres
-        run_reconstruct(inputStar, '_class001', args)
+            # reconstruct the map to maximum resolution given
+            if maxres:
+                args = args + "--maxres %s " % maxres
+            run_reconstruct(input, '_class001', args)
 
 
 def run_command(command, output=""):
