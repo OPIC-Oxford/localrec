@@ -28,6 +28,7 @@ import math
 import sys
 import random
 from itertools import izip
+from glob import glob
 
 from matrix3 import *
 from vector3 import *
@@ -37,7 +38,7 @@ from os.path import basename
 
 from pyrelion import MetaData
 import pyworkflow.utils as pwutils
-
+from pyworkflow.utils.path import moveTree
 
 def within_mindist(p1, p2, mindist):
     """ Returns True if two particles are closer to each other
@@ -435,10 +436,7 @@ def extract_subparticles(subpart_size, np, masked_map, output, deleteParticles):
         run_extract('_subtracted')
 
     print(" Moving subparticles to the output directory...")
-
-    run_command("find Particles/%s/ -name '*.*' | xargs mv --target-directory=%s/" % (output, output))
-    # run_command("mv Particles/%s/* %s/" % (output, output))
-    run_command("rmdir Particles/" + output)
+    moveTree('Particles/%s' % output, output)
 
 
 def write_output_starfiles(labels, mdOut, mdOutSub, output):
