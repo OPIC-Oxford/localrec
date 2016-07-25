@@ -227,6 +227,37 @@ def create_subparticles(particle, symmetry_matrices, subparticle_vector_list,
     return subparticles, subtracted
 
 
+def create_symmetry_related_particles(particle, symmetry_matrices,
+                                      keep_one=False):
+    """ Return all related particles from the given symmetry matrices.
+    If keep_one is True, randomly select only one of these equivalent
+    particles.
+    NOTE: Input particle should already contains angles in radians.
+    """
+    new_particles = []
+
+    rot = -particle.rlnAnglePsi
+    tilt = -particle.rlnAngleTilt
+    psi = -particle.rlnAngleRot
+    matrix_particle = matrix_from_euler(rot, tilt, psi)
+
+    for symmetry_matrix in symmetry_matrices:
+        m = matrix_multiply(symmetry_matrix, matrix_particle)
+        rotNew, tiltNew, psiNew = euler_from_matrix(m)
+
+        new_particle = particle.clone()
+        new_particle.rlnAngleRot = -psiNew
+        new_particle.rlnAngleTilt = -tiltNew
+        new_particle.rlnAnglePsi = -rotNew
+        angles_to_degrees(new_particle)
+        new_particles.append(new_particle)
+
+    if keep_one:
+        new_particles = random.sample(new_particles, 1)
+
+    return new_particles
+
+
 def clone_subtracted_subparticles(subparticles):
     subparticles_subtracted = []
 
@@ -258,6 +289,7 @@ def load_vectors(cmm_file, vectors_str, distances_str, angpix):
     """ Load subparticle vectors either from Chimera CMM file or from
     a vectors string. Distances can also be specified for each vector
     in the distances_str. """
+
     if cmm_file:
         subparticle_vector_list = vectors_from_cmm(cmm_file, angpix)
     else:
@@ -282,7 +314,7 @@ def load_vectors(cmm_file, vectors_str, distances_str, angpix):
         for vector in subparticle_vector_list:
             vector.compute_distance()
 
-    print "Creating subparticles using vectors:"
+    print "Using vectors:"
 
     for subparticle_vector in subparticle_vector_list:
         print "Vector: ",
@@ -338,7 +370,9 @@ def create_initial_stacks(input_star, particle_size, angpix,
         run_command("bsplit -digits 6 -first 1 %s.mrcs:mrc %s.mrc"
                     % (outputParticles, outputParticles))
 
-        print "Finished splitting the particle stack!"
+	run_command("rm -f %s.mrcs" % (outputParticles))
+
+        print "Finished creating and splitting the particle stack!"
         print " "
 
     if split_stacks:
@@ -367,8 +401,9 @@ def extract_subparticles(subpart_size, np, masked_map, output):
         args = ('--extract --o subparticles --extract_size %s --coord_files '
                 '"%s/particles%s_??????.star"') % (subpart_size, output, suffix)
         run_command(cmd + args)
-        run_command('mv subparticles.star %s%s_preprocess.star'
+        run_command("mv subparticles.star %s%s_preprocess.star"
                     % (output, suffix))
+	run_command("rm -f %s/particles%s_??????.mrc" % (output, suffix))
 
     run_extract()  # Run extraction without subtracted density
 

@@ -155,7 +155,6 @@ class LocalizedReconstruction():
 
         print "Creating subparticles..."
 
-
         md = MetaData(particles_star)
 
         # Initialize progress bar
