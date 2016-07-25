@@ -68,7 +68,7 @@ class LocalizedReconstruction():
         addrs = reconstructSubparticles.add_argument
 
         # General parameters
-        add('input_star', help="Input STAR filename with particles.")
+        add('input_star', nargs='?', help="Input STAR filename with particles.")
         add('--output', default='subparticles',
               help="Output root for results.")
 
@@ -121,7 +121,7 @@ class LocalizedReconstruction():
                  "top views (all others will be discarded; degrees).")
 
         # Parameters for "Extract subparticles" group
-        addes('--subparticle_size', type=int, required=True,
+        addes('--subparticle_size', type=int,
             help="Size of the subparticle box (pixels).")
         addes('--np', type=int, default=1, help="Number of MPI procs. (default: 1)")
 
@@ -140,6 +140,7 @@ class LocalizedReconstruction():
         sys.exit(2)
 
     def validate(self, args):
+        # Check that required software is in PATH
         if not (spawn.find_executable("scipion")):
             self.error("Scipion not found.",
                        "Make sure Scipion is in $PATH.")
@@ -148,51 +149,49 @@ class LocalizedReconstruction():
             self.error("Relion not found.",
                        "Make sure Relion programs are in $PATH.")
 
-        if prepare_particles or create_subparticles or extract_subpartices:
+        # Check that required parameters are given for each mode
+        if args.prepare_particles or args.create_subparticles or args.extract_subparticles:
             if len(sys.argv) == 1:
                 self.error("No input particles STAR file given.")
-            if not args.angpix:
-                self.error("Parameter --angpix not specified.")
-            if not args.sym:
-                self.error("Parameter --sym not specified.")
+            if not os.path.exists(args.input_star):
+                self.error("\nInput file '%s' not found." % args.input_star)
 
-        if reconstruct_subpartices:
-            if len(sys.argv) == 1:
-                self.error("No input subparticles STAR file given.")
+        if args.extract_subparticles:
+            if not args.particle_size:
+                self.error("Parameter --particle_size is required.")
+            if not args.subparticle_size:
+                self.error("Parameter --subparticle_size is required.")
 
-        if not os.path.exists(args.input_star):
-            self.error("\nInput file '%s' not found."
-                       % args.input_star)
+        if args.reconstruct_subparticles:
+            if not args.output:
+                self.error("Parameter --output not specified. Cannot find STAR file with subparticles.")
+
+
 
     def main(self):
         self.define_parser()
         args = self.parser.parse_args()
 
-        # Validate input arguments and required software (Scipion and Relion)
+        # Validate input arguments and required software
         self.validate(args)
 
-        particle_size = args.particle_size
-        subpart_image_size = args.subparticle_size
-        output = args.output
-        subtract_masked_map = args.masked_map is not None
-
-        # Load subparticle vectors either from Chimera CMM file or from
-        # command line (command and semi-colon separated)
-        # Distances can also be specified to modify vector lengths
-        subparticle_vector_list = load_vectors(args.cmm, args.vector,
-                                               args.length, args.angpix)
-
-        run_command("mkdir -p " + output, "/dev/null")
+        run_command("mkdir -p " + args.output, "/dev/null")
 
         if args.prepare_particles:
             print "Preparing particles for extracting subparticles."
-            create_initial_stacks(args.input_star, args.angpix, args.masked_map, output)
+            create_initial_stacks(args.input_star, args.angpix, args.masked_map, args.output)
             print "\nFinished preparing the particles!\n"
 
         if args.create_subparticles:
-            particles_star = output + "/particles.star"
+            # Load subparticle vectors either from Chimera CMM file or from
+            # command line (command and semi-colon separated)
+            # Distances can also be specified to modify vector lengths
+            subparticle_vector_list = load_vectors(args.cmm, args.vector,
+                                                   args.length, args.angpix)
 
-            if not os.path.exists(output + "/particles.star"):
+            particles_star = args.output + "/particles.star"
+
+            if not os.path.exists(args.output + "/particles.star"):
                 self.error("Input file '%s not found. "
                            "Run the script first with --prepare_particles option."
                            % particles_star)
@@ -207,8 +206,7 @@ class LocalizedReconstruction():
             symmetry_matrices = matrix_from_symmetry(args.sym)
 
             # Define some conditions to filter subparticles
-            filters = load_filters(radians(args.side), radians(args.top),
-                                  args.mindist)
+            filters = load_filters(radians(args.side), radians(args.top), args.mindist)
 
             # Compute all subparticles (included subtracted if masked_map given)
             mdOut = MetaData()
@@ -218,13 +216,13 @@ class LocalizedReconstruction():
                 subparticles, subtracted = create_subparticles(particle,
                                                        symmetry_matrices,
                                                        subparticle_vector_list,
-                                                       particle_size,
+                                                       args.particle_size,
                                                        args.relax_symmetry,
                                                        args.randomize,
-                                                       output, args.unique,
+                                                       args.output, args.unique,
                                                        len(mdOut),
                                                        args.align_subparticles,
-                                                       subtract_masked_map,
+                                                       args.masked_map,
                                                        filters)
 
 
@@ -234,19 +232,19 @@ class LocalizedReconstruction():
                 progressbar.notify()
 
             md.removeLabels('rlnOriginZ', 'rlnOriginalName')
-            write_output_starfiles(md.getLabels(), mdOut, mdOutSub, output)
+            write_output_starfiles(md.getLabels(), mdOut, mdOutSub, args.output)
 
             print "\nFinished creating the subparticles!\n"
 
         if args.extract_subparticles:
             print "Extracting subparticles..."
-            extract_subparticles(subpart_image_size, args.np, args.masked_map, output, deleteParticles=True)
+            extract_subparticles(args.subparticle_size, args.np, args.masked_map, args.output, deleteParticles=True)
             print "\nFinished extracting the subparticles!\n"
 
         if args.reconstruct_subparticles:
             print "Reconstructing subparticles..."
-            extract_subparticles(args.j, output, maxres)
-            print "\nFinished extracting the subparticles!\n"
+            reconstruct_subparticles(args.j, args.output, args.maxres, args.subsym)
+            print "\nFinished reconstructing the subparticles!\n"
 
 if __name__ == "__main__":    
     LocalizedReconstruction().main()

@@ -423,7 +423,7 @@ def write_output_starfiles(labels, mdOut, mdOutSub, output):
     print "\nWriting output STAR files."
 
     starfile1 = output + ".star"
-    print " Parameters for subparticles: \n      *** %s **" % starfile1
+    print " Subparticles (without subtraction):\t\t%s" % starfile1
     # We convert back angles to degrees and write subparticles star file
     def _writeMd(md, starfile):
         for subpart in md:
@@ -435,22 +435,21 @@ def write_output_starfiles(labels, mdOut, mdOutSub, output):
 
     if len(mdOutSub):
         starfile2 = starfile1.replace('.star', '_subtracted.star')
-        print(" Parameters for subparticles after subtractions: \n"
-              "      *** %s ***" % starfile2)
+        print " Subparticles (with subtraction):\t\t%s" % starfile2
         _writeMd(mdOutSub, starfile2)
 
 
-def split_star_to_random_subsets(inputStar):
-    inputStarName = inputStar+'.star'
+def split_star_to_random_subsets(inputStarRoot):
+    inputStarName = inputStarRoot+'.star'
     md = MetaData(inputStarName)
     mdHalf1 = MetaData()
     mdHalf2 = MetaData()
 
-    half1Star = inputStar+'_half1'
-    half2Star = inputStar+'_half2'
+    half1StarRoot = inputStarRoot+'_half1'
+    half2StarRoot = inputStarRoot+'_half2'
 
-    half1StarName = half1Star+'.star'
-    half2StarName = half2Star+'.star'
+    half1StarName = half1StarRoot+'.star'
+    half2StarName = half2StarRoot+'.star'
 
     particlesHalf1 = []
     particlesHalf2 = []
@@ -466,10 +465,10 @@ def split_star_to_random_subsets(inputStar):
     labels = md.getLabels()
     mdHalf1.addLabels(labels)
     mdHalf2.addLabels(labels)
-    mdHalf1.write(half1Star+'.star')
-    mdHalf2.write(half2Star+'.star')
+    mdHalf1.write(half1StarName)
+    mdHalf2.write(half2StarName)
 
-    return half1StarName, half2StarName
+    return half1StarRoot, half2StarRoot
 
 
 def reconstruct_subparticles(threads, output, maxres, sym):
@@ -477,7 +476,7 @@ def reconstruct_subparticles(threads, output, maxres, sym):
 
     def run_reconstruct(input, suffix='', extraArgs=''):
         cmd = ('relion_reconstruct ')
-        args = ('--sym %s --j %s %s --o %s%s.mrc --i %s.star') % (sym, threads, extraArgs, input, suffix, input)
+        args = ('--sym %s --j %s %s --o %s%s.mrc --i %s.star') % (sym, threads, extraArgs, output, suffix, input)
         run_command(cmd + args)
 
     for input in [output, output+'_subtracted']:
