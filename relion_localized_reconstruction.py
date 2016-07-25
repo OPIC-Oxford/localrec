@@ -29,6 +29,7 @@
 
 import os
 import sys
+import textwrap
 
 from distutils import spawn
 import argparse
@@ -37,18 +38,20 @@ from localrec import *
 from pyrelion import MetaData
 
 
-
 class LocalizedReconstruction():
 
     def define_parser(self):
         self.parser = argparse.ArgumentParser(
-            description="Localised reconstruction of subparticles. Normally the script is run in three steps:"
-                        "1. Prepare particles. "
-                        "2. Create subparticles. "
-                        "3. Extract subparticles. ")
+            formatter_class=argparse.RawDescriptionHelpFormatter,
+            description=textwrap.dedent('''\
+                    Localized reconstruction of subparticles. Normally the script is run in three steps:
+                        1. Prepare particles.
+                        2. Create subparticles.
+                        3. Extract subparticles.
+                        4. Reconstruct subparticles.
+            '''))
         required = self.parser.add_argument_group('required arguments')
         add = self.parser.add_argument  # shortcut
-        addr = required.add_argument
 
         add('input_star', help="Input STAR filename with particles.")
         add('--prepare_particles', action='store_true',
@@ -57,13 +60,17 @@ class LocalizedReconstruction():
             help="Calculate the cooridnates and Euler angles for the subparticles.")
         add('--extract_subparticles', action='store_true',
             help="Extract subparticles from particle images.")
+        add('--reconstruct_subparticles', action='store_true',
+            help="Calculate a reconstruction of the subunit from the subparticles. "
+                 "Subparticle coordinates are read from "
+                 "[output]_subparticles.star and [output]_subparticles_subtracted.star")
         add('--masked_map',
             help="Create another set of particles with partial signal subtraction using this map.")
-        addr('--angpix', type=float, help="Pixel size (A).", required=True)
+        add('--angpix', type=float, help="Pixel size (A).", required=True)
         add('--sym', help="Symmetry of the particle.")
-        addr('--particle_size', type=int, required=True,
+        add('--particle_size', type=int, required=True,
             help="Size of the particle box (pixels).")
-        addr('--subparticle_size', type=int, required=True,
+        add('--subparticle_size', type=int, required=True,
             help="Size of the subparticle box (pixels).")
         add('--randomize', action='store_true',
             help="Randomize the order of the symmetry matrices. \n"
@@ -116,8 +123,17 @@ class LocalizedReconstruction():
             self.error("Relion not found.",
                        "Make sure Relion programs are in $PATH.")
 
-        if len(sys.argv) == 1:
-            self.error("No input file given.")
+        if prepare_particles or create_subparticles or extract_subpartices:
+            if len(sys.argv) == 1:
+                self.error("No input particles STAR file given.")
+            if not args.angpix:
+                self.error("Parameter --angpix not specified.")
+            if not args.sym:
+                self.error("Parameter --sym not specified.")
+
+        if reconstruct_subpartices:
+            if len(sys.argv) == 1:
+                self.error("No input subparticles STAR file given.")
 
         if not os.path.exists(args.input_star):
             self.error("\nInput file '%s' not found."
@@ -200,6 +216,11 @@ class LocalizedReconstruction():
         if args.extract_subparticles:
             print "Extracting subparticles..."
             extract_subparticles(subpart_image_size, args.np, args.masked_map, output, deleteParticles=True)
+            print "\nFinished extracting the subparticles!\n"
+
+        if args.reconstruct_subparticles:
+            print "Reconstructing subparticles..."
+            extract_subparticles(args.j, output, maxres)
             print "\nFinished extracting the subparticles!\n"
 
 if __name__ == "__main__":    
