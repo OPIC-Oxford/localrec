@@ -76,7 +76,7 @@ class LocalizedReconstruction():
                             "Separate multiple vectors with ';'")
         add('--align_subparticles', action='store_true',
             help="Align subparticles to the standard orientation.")
-        add('--length(s)',
+        add('--length',
             help="Alternative length(s) of the vector(s). Use to adjust the "
                  "subparticle center(s) (default: length of the given "
                  "vector; A)."
