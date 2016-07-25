@@ -2,7 +2,7 @@
 
 Localized reconstruction scripts and pyRelion library.
 
-Version: 1.1.0
+Version: 1.1.1
 
 It also requires the following software:
 * Relion 1.4
