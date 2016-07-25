@@ -42,28 +42,26 @@ class LocalizedReconstruction():
 
     def define_parser(self):
         self.parser = argparse.ArgumentParser(
-            description="Calculates the coordinates and Euler angles for the "
-                        "subparticles defined by a vector and symmetry point "
-                        "group. Typically the script is run in four parts:"
-                        "1. Split particle stacks."
-                        "2. Create STAR files for extracting subparticles from particle stacks."
-                        "3. Extract subparticles."
+            description="Localised reconstruction of subparticles. Normally the script is run in three steps:"
+                        "1. Prepare particles. "
+                        "2. Create subparticles. "
+                        "3. Extract subparticles. "
                         "4. Reconstruct a volume from subparticles.")
         required = self.parser.add_argument_group('required arguments')
         add = self.parser.add_argument  # shortcut
         addr = required.add_argument
 
         add('input_star', help="Input STAR filename with particles.")
-        add('--split_stacks', action='store_true',
-            help="Split particle stacks (needs to be done once).")
-        add('--create_star', action='store_true',
-            help="Create new STAR files for extracting subparticles.")
+        add('--prepare_particles', action='store_true',
+            help="Prepare particles for extracting subparticles.")
+        add('--create_subparticles', action='store_true',
+            help="Calculate the cooridnates and Euler angles for the subparticles.")
         add('--extract_subparticles', action='store_true',
             help="Extract subparticles from particle images.")
         add('--reconstruct', action='store_true',
             help="Reconstruct a volume from subparticles.")
         add('--masked_map',
-            help="Map with density to be subtracted from particle images.")
+            help="Create another set of particles with partial signal subtraction using this map.")
         addr('--angpix', type=float, help="Pixel size (A).", required=True)
         add('--maxres', type=float, help="Resolution of the reconstruction (A).")
         add('--sym', help="Symmetry of the particle.")
@@ -74,13 +72,15 @@ class LocalizedReconstruction():
         add('--randomize', action='store_true',
             help="Randomize the order of the symmetry matrices. \n"
                  "Useful for preventing preferred orientations (default: not).")
-        add('--vector', help="Vector defining the location of the subparticle.")
+        add('--vector', help="Vector(s) defining the location of the subparticle."
+                            "Separate multiple vectors with ';'")
         add('--align_subparticles', action='store_true',
             help="Align subparticles to the standard orientation.")
-        add('--length', type=float,
-            help="Alternative length of the vector. Use to adjust the "
-                 "subparticle center (default: length of the given "
-                 "vector; A).")
+        add('--length',
+            help="Alternative length(s) of the vector(s). Use to adjust the "
+                 "subparticle center(s) (default: length of the given "
+                 "vector; A)."
+                 "Use ',' to separate multiple lengths.")
         add('--cmm',
             help="A CMM file defining the location(s) of the subparticle(s) "
                  "(use instead of --vector). Coordinates in Angstrom.")
@@ -106,31 +106,31 @@ class LocalizedReconstruction():
 
     def error(self, *msgs):
         self.usage()
-        print "Error: " + '\n'.join(msgs)
+        print "\nError: " + '\n'.join(msgs)
         print " "
         sys.exit(2)
 
     def validate(self, args):
-        if args.extract_subparticles and not (spawn.find_executable("bimg")):
-            self.error("Error: Bsoft not found.",
-                       "Make sure Bsoft programs are in $PATH.")
+        if not (spawn.find_executable("scipion")):
+            self.error("Scipion not found.",
+                       "Make sure Scipion is in $PATH.")
 
         if not (spawn.find_executable("relion_refine")):
-            self.error("Error: Relion not found.",
+            self.error("Relion not found.",
                        "Make sure Relion programs are in $PATH.")
 
         if len(sys.argv) == 1:
-            self.error("Error: No input file given.")
+            self.error("No input file given.")
 
         if not os.path.exists(args.input_star):
-            self.error("Error: Input file '%s' not found."
+            self.error("\nInput file '%s' not found."
                        % args.input_star)
 
     def main(self):
         self.define_parser()
         args = self.parser.parse_args()
 
-        # Validate input arguments and required software (Relion and Bsoft)
+        # Validate input arguments and required software (Scipion and Relion)
         self.validate(args)
 
         particle_size = args.particle_size
@@ -146,58 +146,65 @@ class LocalizedReconstruction():
 
         run_command("mkdir -p " + output, "/dev/null")
 
-        if args.extract_subparticles:
-            create_initial_stacks(args.input_star, particle_size, args.angpix,
-                                  args.split_stacks, args.masked_map, output)
+        if args.prepare_particles:
+            print "Preparing particles for extracting subparticles."
+            create_initial_stacks(args.input_star, args.angpix, args.masked_map, output)
+            print "\nFinished preparing the particles!\n"
+
+        if args.create_subparticles:
             particles_star = output + "/particles.star"
-        else:
-            particles_star = args.input_star
 
-        print "Creating subparticles..."
+            if not os.path.exists(output + "/particles.star"):
+                self.error("Input file '%s not found. "
+                           "Run the script first with --prepare_particles option."
+                           % particles_star)
 
-        md = MetaData(particles_star)
+            md = MetaData(particles_star)
+            print "Creating subparticles..."
 
-        # Initialize progress bar
-        progressbar = ProgressBar(width=70, percent=0.01, total=len(md))
+            # Initialize progress bar
+            progressbar = ProgressBar(width=70, percent=0.01, total=len(md))
 
-        # Generate symmetry matrices with Relion convention
-        symmetry_matrices = matrix_from_symmetry(args.sym)
+            # Generate symmetry matrices with Relion convention
+            symmetry_matrices = matrix_from_symmetry(args.sym)
 
-        # Define some conditions to filter subparticles
-        filters = load_filters(radians(args.side), radians(args.top),
-                               args.mindist)
+            # Define some conditions to filter subparticles
+            filters = load_filters(radians(args.side), radians(args.top),
+                                  args.mindist)
 
-        # Compute all subparticles (included subtracted if masked_map given)
-        mdOut = MetaData()
-        mdOutSub = MetaData()
+            # Compute all subparticles (included subtracted if masked_map given)
+            mdOut = MetaData()
+            mdOutSub = MetaData()
 
-        for particle in md:
-            subparticles, subtracted = create_subparticles(particle,
-                                                   symmetry_matrices,
-                                                   subparticle_vector_list,
-                                                   particle_size,
-                                                   args.randomize,
-                                                   "subparticles", args.unique,
-                                                   len(mdOut),
-                                                   args.align_subparticles,
-                                                   subtract_masked_map,
-                                                   args.create_star, filters)
+            for particle in md:
+                subparticles, subtracted = create_subparticles(particle,
+                                                       symmetry_matrices,
+                                                       subparticle_vector_list,
+                                                       particle_size,
+                                                       args.randomize,
+                                                       output, args.unique,
+                                                       len(mdOut),
+                                                       args.align_subparticles,
+                                                       subtract_masked_map,
+                                                       True, # create star files
+                                                       filters)
 
-            mdOut.addData(subparticles)
-            mdOutSub.addData(subtracted)
+                mdOut.addData(subparticles)
+                mdOutSub.addData(subtracted)
 
-            progressbar.notify()
+                progressbar.notify()
 
-        print "\nFinished creating the subparticles!\n"
+            md.removeLabels('rlnOriginZ', 'rlnOriginalName')
+            write_output_starfiles(md.getLabels(), mdOut, mdOutSub, output)
+
+            print "\nFinished creating the subparticles!\n"
 
         if args.extract_subparticles:
-            extract_subparticles(subpart_image_size, args.np,
-                                 args.masked_map, output)
+            print "Extracting subparticles..."
+            extract_subparticles(subpart_image_size, args.np, args.masked_map,
+                                 output, deleteParticles=True)
+            print "\nFinished extracting the subparticles!\n"
 
-        write_output_starfiles(md.getLabels(), mdOut, mdOutSub, output)
-
-        if args.reconstruct:
-            reconstruct_subparticles(args.np, mdOutSub, output)
 
 if __name__ == "__main__":    
     LocalizedReconstruction().main()
