@@ -72,13 +72,15 @@ class LocalizedReconstruction():
         add('--randomize', action='store_true',
             help="Randomize the order of the symmetry matrices. \n"
                  "Useful for preventing preferred orientations (default: not).")
-        add('--vector', help="Vector defining the location of the subparticle.")
+        add('--vector', help="Vector(s) defining the location of the subparticle."
+                            "Separate multiple vectors with ';'")
         add('--align_subparticles', action='store_true',
             help="Align subparticles to the standard orientation.")
-        add('--length', type=float,
-            help="Alternative length of the vector. Use to adjust the "
-                 "subparticle center (default: length of the given "
-                 "vector; A).")
+        add('--length(s)',
+            help="Alternative length(s) of the vector(s). Use to adjust the "
+                 "subparticle center(s) (default: length of the given "
+                 "vector; A)."
+                 "Use ',' to separate multiple lengths.")
         add('--cmm',
             help="A CMM file defining the location(s) of the subparticle(s) "
                  "(use instead of --vector). Coordinates in Angstrom.")
