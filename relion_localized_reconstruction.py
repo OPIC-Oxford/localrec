@@ -50,60 +50,77 @@ class LocalizedReconstruction():
                         3. Extract subparticles.
                         4. Reconstruct subparticles.
             '''))
-        required = self.parser.add_argument_group('required arguments')
-        add = self.parser.add_argument  # shortcut
+        add = self.parser.add_argument('General parameters')
+        adds = self.parser.add_argument_group('Steps', 'Several steps can be combined in one run.')
+        addpp = self.parser.add_argument_group('Prepare particles')
+        addcs = self.parser.add_argument_group('Create subparticles')
+        addes = self.parser.add_argument_group('Extract subparticles')
+        addrs = self.parser.add_argument_group('Reconstruct subparticles')
 
+        # General parameters
         add('input_star', help="Input STAR filename with particles.")
-        add('--prepare_particles', action='store_true',
-            help="Prepare particles for extracting subparticles.")
-        add('--create_subparticles', action='store_true',
-            help="Calculate the cooridnates and Euler angles for the subparticles.")
-        add('--extract_subparticles', action='store_true',
-            help="Extract subparticles from particle images.")
-        add('--reconstruct_subparticles', action='store_true',
-            help="Calculate a reconstruction of the subunit from the subparticles. "
+        add('--output', default='subparticles',
+              help="Output root for results.")
+
+        # Parameters for "Steps" group
+        adds('--prepare_particles', action='store_true',
+              help="Prepare particles for extracting subparticles.")
+        addcs('--create_subparticles', action='store_true',
+              help="Calculate the cooridnates and Euler angles for the subparticles.")
+        adds('--extract_subparticles', action='store_true',
+              help="Extract subparticles from particle images.")
+        addrs('--reconstruct_subparticles', action='store_true',
+              help="Calculate a reconstruction of the subunit from the subparticles. "
                  "Subparticle coordinates are read from "
                  "[output]_subparticles.star and [output]_subparticles_subtracted.star")
-        add('--masked_map',
-            help="Create another set of particles with partial signal subtraction using this map.")
-        add('--angpix', type=float, help="Pixel size (A).", required=True)
-        add('--sym', help="Symmetry of the particle.")
-        add('--particle_size', type=int, required=True,
-            help="Size of the particle box (pixels).")
-        add('--subparticle_size', type=int, required=True,
-            help="Size of the subparticle box (pixels).")
-        add('--randomize', action='store_true',
-            help="Randomize the order of the symmetry matrices. \n"
-                 "Useful for preventing preferred orientations (default: not).")
-        add('--relax_symmetry', action='store_true',
-            help="Create one random subparticle for each particle "
-                 "(default: all symmetry related subparticles).")
-        add('--vector', help="Vector defining the location of the subparticle.")
-        add('--align_subparticles', action='store_true',
-            help="Align subparticles to the standard orientation.")
-        add('--length',
-            help="Alternative length of the vector. Use to adjust the "
+
+        # Parameters for "Prepare particles" group
+        addpp('--masked_map',
+              help="Create another set of particles with partial signal subtraction using this map.")
+
+        # Parameters for "Create subparticles" group
+        addcs('--angpix', type=float, default=1, help="Pixel size (A; default 1 A).")
+        addcs('--sym', help="Symmetry of the particle.")
+        addcs('--particle_size', type=int,
+              help="Size of the particle box (pixels).")
+        addcs('--randomize', action='store_true',
+              help="Randomize the order of the symmetry matrices. \n"
+                   "Useful for preventing preferred orientations (default: not).")
+        addcs('--relax_symmetry', action='store_true',
+              help="Create one random subparticle for each particle "
+                   "(default: all symmetry related subparticles).")
+        addcs('--vector', help="Vector defining the location of the subparticle.")
+        addcs('--align_subparticles', action='store_true',
+              help="Align subparticles to the standard orientation.")
+        addcs('--length',
+              help="Alternative length of the vector. Use to adjust the "
                  "subparticle center (default: length of the given "
                  "vector; A).")
-        add('--cmm',
-            help="A CMM file defining the location(s) of the subparticle(s) "
+        addcs('--cmm',
+              help="A CMM file defining the location(s) of the subparticle(s) "
                  "(use instead of --vector). Coordinates in Angstrom.")
-        add('--unique', type=float, default=-1,
-            help="Keep only unique subparticles within angular distance "
+        addcs('--unique', type=float, default=-1,
+              help="Keep only unique subparticles within angular distance "
                  "(useful to remove overlapping subparticles on symmetry axis).")
-        add('--mindist', type=float, default=-1,
-            help="Minimum distance between the subparticles in the image "
+        addcs('--mindist', type=float, default=-1,
+              help="Minimum distance between the subparticles in the image "
                  "(all overlapping ones will be discarded; pixels).")
-        add('--side', type=float, default=-1,
-            help="Keep only particles within specified angular distance from "
+        addcs('--side', type=float, default=-1,
+              help="Keep only particles within specified angular distance from "
                  "side views (all others will be discarded; degrees).")
-        add('--top', type=float, default=-1,
-            help="Keep only particles within specified angular distance from "
+        addcs('--top', type=float, default=-1,
+              help="Keep only particles within specified angular distance from "
                  "top views (all others will be discarded; degrees).")
-        add('--output', default='subparticles',
-            help="Output root for results.")
-        add('--j', type=int, default=8, help="Number of threads.")
-        add('--np', type=int, default=4, help="Number of MPI procs.")
+
+        # Parameters for "Extract subparticles" group
+        addes('--subparticle_size', type=int, required=True,
+            help="Size of the subparticle box (pixels).")
+        addes('--np', type=int, default=1, help="Number of MPI procs (default: 1).")
+
+        # Parameters for "Reconstruct subparticles" group
+        addrs('--j', type=int, default=8, help="Number of threads.")
+        addrs('--maxres', type=float, help="Maximum resolution of the reconstruction (A).")
+        addrs('--subsym', help="Symmetry of the subparticle.")
 
     def usage(self):
         self.parser.print_help()
