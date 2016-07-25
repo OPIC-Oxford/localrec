@@ -222,6 +222,7 @@ class LocalizedReconstruction():
                                                        args.output, args.unique,
                                                        len(mdOut),
                                                        args.align_subparticles,
+                                                       True, # create star files
                                                        args.masked_map,
                                                        filters)
 
@@ -246,6 +247,6 @@ class LocalizedReconstruction():
             reconstruct_subparticles(args.j, args.output, args.maxres, args.subsym)
             print "\nFinished reconstructing the subparticles!\n"
 
-if __name__ == "__main__":    
+if __name__ == "__main__":
     LocalizedReconstruction().main()
 

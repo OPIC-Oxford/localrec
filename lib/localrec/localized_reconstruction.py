@@ -123,9 +123,9 @@ def angles_to_degrees(particle):
 
 
 def create_subparticles(particle, symmetry_matrices, subparticle_vector_list,
-                        part_image_size, relax_symmetry, randomize, output,
+                        part_image_size, randomize, output,
                         unique, subparticles_total, align_subparticles,
-                        subtract_masked_map, filters):
+                        subtract_masked_map, do_create_star, filters):
     """ Obtain all subparticles from a given particle and set
     the properties of each such subparticle. """
 
@@ -208,19 +208,15 @@ def create_subparticles(particle, symmetry_matrices, subparticle_vector_list,
                 subpart_id += 1
                 subparticles_total += 1
 
-            if relax_symmetry:
-                # take just the first (random) one and finish
-                break
-
     if subtract_masked_map:
         subtracted = clone_subtracted_subparticles(subparticles)
 
     # To preserve numbering, ALL sub-particles are written to STAR files before filtering
-
-    starfile = "%s/%s.star" % (output, part_filename)
-    create_star(subparticles, starfile)
-    if subtract_masked_map:
-        create_star(subtracted, add_suffix(starfile))
+    if do_create_star:
+        starfile = "%s/%s.star" % (output, part_filename)
+        create_star(subparticles, starfile)
+        if subtract_masked_map:
+            create_star(subtracted, add_suffix(starfile))
 
     if filters:
         subparticles = filter_subparticles(subparticles, filters)
@@ -229,6 +225,37 @@ def create_subparticles(particle, symmetry_matrices, subparticle_vector_list,
             subtracted = clone_subtracted_subparticles(subparticles)
 
     return subparticles, subtracted
+
+
+def create_symmetry_related_particles(particle, symmetry_matrices,
+                                      keep_one=False):
+    """ Return all related particles from the given symmetry matrices.
+    If keep_one is True, randomly select only one of these equivalent
+    particles.
+    NOTE: Input particle should already contains angles in radians.
+    """
+    new_particles = []
+
+    rot = -particle.rlnAnglePsi
+    tilt = -particle.rlnAngleTilt
+    psi = -particle.rlnAngleRot
+    matrix_particle = matrix_from_euler(rot, tilt, psi)
+
+    for symmetry_matrix in symmetry_matrices:
+        m = matrix_multiply(symmetry_matrix, matrix_particle)
+        rotNew, tiltNew, psiNew = euler_from_matrix(m)
+
+        new_particle = particle.clone()
+        new_particle.rlnAngleRot = -psiNew
+        new_particle.rlnAngleTilt = -tiltNew
+        new_particle.rlnAnglePsi = -rotNew
+        angles_to_degrees(new_particle)
+        new_particles.append(new_particle)
+
+    if keep_one:
+        new_particles = random.sample(new_particles, 1)
+
+    return new_particles
 
 
 def clone_subtracted_subparticles(subparticles):
@@ -420,10 +447,11 @@ def extract_subparticles(subpart_size, np, masked_map, output, deleteParticles):
 def write_output_starfiles(labels, mdOut, mdOutSub, output):
 
     labels.extend(['rlnCoordinateX', 'rlnCoordinateY', 'rlnMicrographName'])
+
     print "\nWriting output STAR files."
 
     starfile1 = output + ".star"
-    print " Subparticles (without subtraction):\t\t%s" % starfile1
+    print " Parameters for subparticles: \n      *** %s **" % starfile1
     # We convert back angles to degrees and write subparticles star file
     def _writeMd(md, starfile):
         for subpart in md:
@@ -435,7 +463,8 @@ def write_output_starfiles(labels, mdOut, mdOutSub, output):
 
     if len(mdOutSub):
         starfile2 = starfile1.replace('.star', '_subtracted.star')
-        print " Subparticles (with subtraction):\t\t%s" % starfile2
+        print(" Parameters for subparticles after subtractions: \n"
+              "      *** %s ***" % starfile2)
         _writeMd(mdOutSub, starfile2)
 
 
