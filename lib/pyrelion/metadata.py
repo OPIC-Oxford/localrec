@@ -36,6 +36,7 @@ LABELS = {
     'rlnMagnification': float,
     'rlnAmplitudeContrast': float,
     'rlnImageName': str,
+    'rlnOriginalName': str,
     'rlnCtfImage': str,
     'rlnCoordinateX': float,
     'rlnCoordinateY': float,

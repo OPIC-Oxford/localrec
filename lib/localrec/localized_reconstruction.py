@@ -33,6 +33,7 @@ from matrix3 import *
 from vector3 import *
 from euler import *
 from os.path import splitext
+from os.path import basename
 
 from pyrelion import MetaData
 
@@ -124,14 +125,13 @@ def angles_to_degrees(particle):
 def create_subparticles(particle, symmetry_matrices, subparticle_vector_list,
                         part_image_size, relax_symmetry, randomize, output,
                         unique, subparticles_total, align_subparticles,
-                        subtract_masked_map, do_create_star, filters):
+                        subtract_masked_map, filters):
     """ Obtain all subparticles from a given particle and set
     the properties of each such subparticle. """
 
-    part_index = particle.rlnImageName[0:6]
-    part_prefix = splitext(particle.rlnImageName[7:])[0]
-    part_filename = "%s_%s.mrc" % (part_prefix, part_index)
-    part_stack = "%s_%s_%s.mrcs" % (part_prefix, part_index, output)
+    part_filename = splitext(basename(particle.rlnImageName))[0]
+
+
 
     # We convert the particle angles to radian for further computations
     angles_to_radians(particle)
@@ -201,9 +201,9 @@ def create_subparticles(particle, symmetry_matrices, subparticle_vector_list,
                         not filter_unique(subparticles, subpart, unique))
 
             if not overlaps:
-                subpart.rlnImageName = "%06d@%s" % (subpart_id, part_stack)
+                subpart.rlnImageName = "%06d@%s/%s_subparticles.mrcs" % (subpart_id, output, part_filename)
                 subpart.rlnParticleName = str(subparticles_total)
-                subpart.rlnMicrographName = part_filename
+                subpart.rlnMicrographName = part_filename + ".mrc"
                 subparticles.append(subpart)
                 subpart_id += 1
                 subparticles_total += 1
@@ -216,11 +216,11 @@ def create_subparticles(particle, symmetry_matrices, subparticle_vector_list,
         subtracted = clone_subtracted_subparticles(subparticles)
 
     # To preserve numbering, ALL sub-particles are written to STAR files before filtering
-    if do_create_star:
-        starfile = "%s_%s.star" % (part_prefix, part_index)
-        create_star(subparticles, starfile)
-        if subtract_masked_map:
-            create_star(subtracted, add_suffix(starfile))
+
+    starfile = "%s/%s.star" % (output, part_filename)
+    create_star(subparticles, starfile)
+    if subtract_masked_map:
+        create_star(subtracted, add_suffix(starfile))
 
     if filters:
         subparticles = filter_subparticles(subparticles, filters)
@@ -252,8 +252,7 @@ def create_star(subparticles, star_filename):
     all the subparticles for a given particle. """
 
     md = MetaData()
-    md.addLabels("rlnMicrographName", "rlnCoordinateX", "rlnCoordinateY",
-                 "rlnImageName")
+    md.addLabels("rlnCoordinateX", "rlnCoordinateY")
     md.addData(subparticles)
     md.write(star_filename)
 
@@ -320,52 +319,75 @@ def load_filters(side, top, mindist):
     return filters
 
 
-def create_initial_stacks(input_star, particle_size, angpix,
-                          split_stacks, masked_map, output):
-    """ Create initial particle stacks (and star files) to be used
-    for extraction of subparticles.
-    If the subtracted_map is passed, another stack with subtracted
-    particles will be created. """
+def scipion_split_particle_stacks(inputStar, inputStack, output, filename_prefix, deleteStack):
+    """ Read a STAR file with particles and write as individual images.
+    If a stack of images is given, use these instead of the images from the STAR file.
+    Also write a new STAR file pointing to these images.
+    This function requires that the script is run within Scipion Python environment. """
 
-    def create_stack(suffix, maskedFile, extra=''):
-        print "Creating and splitting the particle stack..."
-        if suffix:
-            print(" Creating a stack from which the projections of the masked "
-                  "particle have been subtracted...")
+    import pyworkflow.utils as pwutils
+    from pyworkflow.em import ImageHandler
+    ih = ImageHandler()
+    md = MetaData(inputStar)
+    md.addLabels('rlnOriginalName')
+
+    # Initialize progress bar
+    progressbar = ProgressBar(width=70, percent=0.01, total=len(md))
+
+    for i, particle in enumerate(md, start=1):
+        outputImageName = '%s/%s_%06d.mrc' % (output, filename_prefix, i)
+
+        if inputStack:
+            ih.convert((i, inputStack), outputImageName )
+            particle.rlnOriginalName = '%s/%06d@%s' %(output, i, inputStack)
         else:
-            print " Creating a normal stack from which nothing is subtracted..."
+            ih.convert(particle.rlnImageName, outputImageName)
+            particle.rlnOriginalName = particle.rlnImageName
 
-        outputParticles = "%s/particles%s" % (output, suffix)
-        args = " --i %s --o %s --ang %s --subtract_exp --angpix %s " + extra
-        run_command("relion_project" + args %
-                    (maskedFile, outputParticles, input_star, angpix))
+        particle.rlnImageName = outputImageName
 
-        #run_command("bsplit -digits 6 -first 1 %s.mrcs:mrc %s.mrc"
-        #            % (outputParticles, outputParticles))
-        run_command("scipion xmipp_image_convert -i %s.mrcs --oroot %s_:mrc" % (outputParticles, outputParticles))
+        progressbar.notify()
+
+    print("\n")
+    md.write("%s/%s.star" % (output, filename_prefix))
+
+    if inputStack and deleteStack:
+        pwutils.cleanPath(inputStack)
 
 
-	run_command("rm -f %s.mrcs" % (outputParticles))
+def create_initial_stacks(input_star, angpix, masked_map, output):
+    """ Create initial particle stacks (and STAR files) to be used
+    for extraction of subparticles. If the masked_map is passed,
+    another stack with subtracted particles will be created. """
 
-        print "Finished creating and splitting the particle stack!"
-        print " "
-
-    if split_stacks:
-        maskedFile = 'dummy_mask.mrc'
-        run_command("beditimg -create %s,%s,%s -fill 0 %s"
-                    % (particle_size, particle_size, particle_size, maskedFile))
-        create_stack('', maskedFile)
-        run_command("rm -f %s" % maskedFile)
+    print " Creating particle images from which nothing is subtracted..."
+    scipion_split_particle_stacks(input_star, None, output, 'particles', deleteStack=False)
 
     if masked_map:
-        create_stack('_subtracted', masked_map, '--ctf')
+        print(" Creating particle images from which the projections of the masked "
+              "particle reconstruction have been subtracted...")
+
+        subtractedStackRoot = "%s/particles_subtracted" % output
+
+        md = MetaData(input_star)
+        args = " --i %s --o %s --ang %s --subtract_exp --angpix %s "
+        if "rlnDefocusU" in md.getLabels():
+            args = args + "--ctf "
+        else:
+            print ("\nWarning: no CTF info found in %s!\n"
+                   "The subtraction will be performed without CTF correction.\n" % input_star)
+        run_command("relion_project" + args %
+                    (masked_map, subtractedStackRoot, input_star, angpix))
+        run_command("mv %s.star %s_orig.star" % (subtractedStackRoot, subtractedStackRoot))
+
+        subtractedStack = subtractedStackRoot + '.mrcs'
+
+        scipion_split_particle_stacks(input_star, subtractedStack, output, 'particles_subtracted', deleteStack=True)
 
 
-def extract_subparticles(subpart_size, np, masked_map, output):
+def extract_subparticles(subpart_size, np, masked_map, output, deleteParticles):
     """ Extract subparticles images from each particle
     (Using 'relion_preprocess' as if the particle was a micrograph. """
-
-    print "Extracting the subparticles..."
 
     if np == 1:
         cmd = 'relion_preprocess '
@@ -375,29 +397,33 @@ def extract_subparticles(subpart_size, np, masked_map, output):
     def run_extract(suffix=''):
         args = ('--extract --o subparticles --extract_size %s --coord_files '
                 '"%s/particles%s_??????.star"') % (subpart_size, output, suffix)
-        run_command(cmd + args)
-        run_command("mv subparticles.star %s%s_preprocess.star"
-                    % (output, suffix))
-	run_command("rm -f %s/particles%s_??????.mrc" % (output, suffix))
+        run_command(cmd + args, "/dev/null")
+        print(" Cleaning up temporary files...")
+        run_command("rm subparticles.star")
+        if deleteParticles:
+            #run_command("cd %s; find . -name \"particles%s_??????.mrc\" -print0 | xargs -0 rm ; cd .." % (output, suffix))
+            run_command(
+                "find %s/ -name 'particles%s_??????.mrc' -print0 | xargs -0 rm " % (output, suffix))
 
     run_extract()  # Run extraction without subtracted density
 
     if masked_map:
         run_extract('_subtracted')
 
-    run_command("mv Particles/%s/* %s/" % (output, output))
-    run_command("rmdir Particles/" + output)
+    print(" Moving subparticles to the output directory...")
 
-    print "Finished extracting the subparticles!\n"
+    run_command("find Particles/%s/ -name '*.*' | xargs mv --target-directory=%s/" % (output, output))
+    # run_command("mv Particles/%s/* %s/" % (output, output))
+    run_command("rmdir Particles/" + output)
 
 
 def write_output_starfiles(labels, mdOut, mdOutSub, output):
 
     labels.extend(['rlnCoordinateX', 'rlnCoordinateY', 'rlnMicrographName'])
-    print "Writing output star files."
+    print "\nWriting output STAR files."
 
     starfile1 = output + ".star"
-    print "   Parameters for subparticles: \n      *** %s **" % starfile1
+    print " Parameters for subparticles: \n      *** %s **" % starfile1
     # We convert back angles to degrees and write subparticles star file
     def _writeMd(md, starfile):
         for subpart in md:
@@ -409,11 +435,9 @@ def write_output_starfiles(labels, mdOut, mdOutSub, output):
 
     if len(mdOutSub):
         starfile2 = starfile1.replace('.star', '_subtracted.star')
-        print("   Parameters for subparticles after subtractions: \n"
+        print(" Parameters for subparticles after subtractions: \n"
               "      *** %s ***" % starfile2)
         _writeMd(mdOutSub, starfile2)
-
-    print "The output files have been written!\n"
 
 
 def run_command(command, output=""):
@@ -426,12 +450,13 @@ def run_command(command, output=""):
 
 
 class ProgressBar():
-    """ Implements a simple command line progress bar"""
+    """ Implements a simple command line progress bar.
+    Still need fixing, now the shark swims too far..."""
 
     def __init__(self, width, percent, total):
         # setup toolbar
         self.width = width
-        sys.stdout.write("%s>->o" % (" " * width))
+        sys.stdout.write("%s>->o" % ("_" * width))
         sys.stdout.flush()
         sys.stdout.write("\b" * (width))
         self.count = 0  # total count
@@ -444,7 +469,7 @@ class ProgressBar():
         if self.count == int(self.total * self.timer):
             sys.stdout.write("\b" * (self.c + 8))
             sys.stdout.write("~" * self.c)
-            sys.stdout.write(">))^)>")
+            sys.stdout.write("><))^)>")
             sys.stdout.flush()
             self.timer += self.percent
             self.c += 1
