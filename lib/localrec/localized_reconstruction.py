@@ -36,6 +36,7 @@ from os.path import splitext
 from os.path import basename
 
 from pyrelion import MetaData
+import pyworkflow.utils as pwutils
 
 
 def within_mindist(p1, p2, mindist):
@@ -426,9 +427,7 @@ def extract_subparticles(subpart_size, np, masked_map, output, deleteParticles):
         print(" Cleaning up temporary files...")
         run_command("rm subparticles.star")
         if deleteParticles:
-            #run_command("cd %s; find . -name \"particles%s_??????.mrc\" -print0 | xargs -0 rm ; cd .." % (output, suffix))
-            run_command(
-                "find %s/ -name 'particles%s_??????.mrc' -print0 | xargs -0 rm " % (output, suffix))
+            pwutils.cleanPattern('%s/particles%s_??????.mrc' % (output, suffix))
 
     run_extract()  # Run extraction without subtracted density
 
