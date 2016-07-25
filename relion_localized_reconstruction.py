@@ -166,11 +166,6 @@ class LocalizedReconstruction():
             if not args.output:
                 self.error("Parameter --output not specified. Cannot find STAR file with subparticles.")
 
-        # If no mode is selected and no input file is given, print usage
-        if not (args.prepare_particles or args.create_subparticles or args.extract_subparticles or args.reconstruct_subparticles):
-            if len(sys.argv) == 1:
-                self.error("No input particles STAR file given.")
-
     def main(self):
         self.define_parser()
         args = self.parser.parse_args()
