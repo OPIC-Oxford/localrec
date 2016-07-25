@@ -50,12 +50,18 @@ class LocalizedReconstruction():
                         3. Extract subparticles.
                         4. Reconstruct subparticles.
             '''))
-        add = self.parser.add_argument_group('General parameters')
-        adds = self.parser.add_argument_group('Steps', 'Several steps can be combined in one run.')
-        addpp = self.parser.add_argument_group('Prepare particles')
-        addcs = self.parser.add_argument_group('Create subparticles')
-        addes = self.parser.add_argument_group('Extract subparticles')
-        addrs = self.parser.add_argument_group('Reconstruct subparticles')
+        general = self.parser.add_argument_group('General parameters')
+        steps = self.parser.add_argument_group('Steps', 'Several steps can be combined in one run.')
+        prepareParticles = self.parser.add_argument_group('Prepare particles')
+        createSubparticles = self.parser.add_argument_group('Create subparticles')
+        extractSubparticles = self.parser.add_argument_group('Extract subparticles')
+        reconstructSubparticles = self.parser.add_argument_group('Reconstruct subparticles')
+        add = general.add_argument()
+        adds = steps.add_argument()
+        addpp = prepareParticles.add_argument()
+        addcs = createSubparticles.add_argument()
+        addes = extractSubparticles.add_argument()
+        addrs = reconstructSubparticles.add_argument()
 
         # General parameters
         add('input_star', help="Input STAR filename with particles.")
