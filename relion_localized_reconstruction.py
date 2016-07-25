@@ -181,7 +181,6 @@ class LocalizedReconstruction():
                                                        symmetry_matrices,
                                                        subparticle_vector_list,
                                                        particle_size,
-                                                       args.relax_symmetry,
                                                        args.randomize,
                                                        output, args.unique,
                                                        len(mdOut),
