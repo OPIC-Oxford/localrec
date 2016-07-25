@@ -217,14 +217,14 @@ class LocalizedReconstruction():
                                                        symmetry_matrices,
                                                        subparticle_vector_list,
                                                        args.particle_size,
-                                                       args.relax_symmetry,
                                                        args.randomize,
+                                                       args.relax_symmetry,
                                                        args.output, args.unique,
                                                        len(mdOut),
                                                        args.align_subparticles,
                                                        args.masked_map,
+                                                       True,
                                                        filters)
-
 
                 mdOut.addData(subparticles)
                 mdOutSub.addData(subtracted)
@@ -246,6 +246,6 @@ class LocalizedReconstruction():
             reconstruct_subparticles(args.j, args.output, args.maxres, args.subsym)
             print "\nFinished reconstructing the subparticles!\n"
 
-if __name__ == "__main__":    
+if __name__ == "__main__":
     LocalizedReconstruction().main()
 
