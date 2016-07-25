@@ -29,6 +29,7 @@
 
 import os
 import sys
+import textwrap
 
 from distutils import spawn
 import argparse
@@ -37,66 +38,97 @@ from localrec import *
 from pyrelion import MetaData
 
 
-
 class LocalizedReconstruction():
 
     def define_parser(self):
         self.parser = argparse.ArgumentParser(
-            description="Localised reconstruction of subparticles. Normally the script is run in three steps:"
-                        "1. Prepare particles. "
-                        "2. Create subparticles. "
-                        "3. Extract subparticles. ")
-        required = self.parser.add_argument_group('required arguments')
-        add = self.parser.add_argument  # shortcut
-        addr = required.add_argument
+            formatter_class=argparse.RawDescriptionHelpFormatter,
+            description=textwrap.dedent('''\
+                    Localized reconstruction of subparticles. Normally the script is run in four steps:
+                        1. Prepare particles.
+                        2. Create subparticles.
+                        3. Extract subparticles.
+                        4. Reconstruct subparticles.
+            '''))
 
-        add('input_star', help="Input STAR filename with particles.")
-        add('--prepare_particles', action='store_true',
-            help="Prepare particles for extracting subparticles.")
-        add('--create_subparticles', action='store_true',
-            help="Calculate the cooridnates and Euler angles for the subparticles.")
-        add('--extract_subparticles', action='store_true',
-            help="Extract subparticles from particle images.")
-        add('--masked_map',
-            help="Create another set of particles with partial signal subtraction using this map.")
-        addr('--angpix', type=float, help="Pixel size (A).", required=True)
-        add('--sym', help="Symmetry of the particle.")
-        addr('--particle_size', type=int, required=True,
-            help="Size of the particle box (pixels).")
-        addr('--subparticle_size', type=int, required=True,
-            help="Size of the subparticle box (pixels).")
-        add('--randomize', action='store_true',
-            help="Randomize the order of the symmetry matrices. \n"
-                 "Useful for preventing preferred orientations (default: not).")
-        add('--relax_symmetry', action='store_true',
-            help="Create one random subparticle for each particle "
-                 "(default: all symmetry related subparticles).")
-        add('--vector', help="Vector defining the location of the subparticle.")
-        add('--align_subparticles', action='store_true',
-            help="Align subparticles to the standard orientation.")
-        add('--length',
-            help="Alternative length of the vector. Use to adjust the "
-                 "subparticle center (default: length of the given "
-                 "vector; A).")
-        add('--cmm',
-            help="A CMM file defining the location(s) of the subparticle(s) "
-                 "(use instead of --vector). Coordinates in Angstrom.")
-        add('--unique', type=float, default=-1,
-            help="Keep only unique subparticles within angular distance "
-                 "(useful to remove overlapping subparticles on symmetry axis).")
-        add('--mindist', type=float, default=-1,
-            help="Minimum distance between the subparticles in the image "
-                 "(all overlapping ones will be discarded; pixels).")
-        add('--side', type=float, default=-1,
-            help="Keep only particles within specified angular distance from "
-                 "side views (all others will be discarded; degrees).")
-        add('--top', type=float, default=-1,
-            help="Keep only particles within specified angular distance from "
-                 "top views (all others will be discarded; degrees).")
+        # Parameter groups
+        general = self.parser.add_argument_group('General parameters')
+        steps = self.parser.add_argument_group('Steps', 'Several steps can be combined in one run.')
+        prepareParticles = self.parser.add_argument_group('Prepare particles')
+        createSubparticles = self.parser.add_argument_group('Create subparticles')
+        extractSubparticles = self.parser.add_argument_group('Extract subparticles')
+        reconstructSubparticles = self.parser.add_argument_group('Reconstruct subparticles')
+
+        # Shortcuts
+        add = general.add_argument
+        adds = steps.add_argument
+        addpp = prepareParticles.add_argument
+        addcs = createSubparticles.add_argument
+        addes = extractSubparticles.add_argument
+        addrs = reconstructSubparticles.add_argument
+
+        # General parameters
+        add('input_star', nargs='?', help="Input STAR filename with particles.")
         add('--output', default='subparticles',
-            help="Output root for results.")
-        add('--j', type=int, default=8, help="Number of threads.")
-        add('--np', type=int, default=4, help="Number of MPI procs.")
+              help="Output root for results.")
+
+        # Parameters for "Steps" group
+        adds('--prepare_particles', action='store_true',
+              help="Prepare particles for extracting subparticles.")
+        adds('--create_subparticles', action='store_true',
+              help="Calculate the cooridnates and Euler angles for the subparticles.")
+        adds('--extract_subparticles', action='store_true',
+              help="Extract subparticles from particle images.")
+        adds('--reconstruct_subparticles', action='store_true',
+              help="Calculate a reconstruction of the subunit from the subparticles. "
+                 "Subparticle coordinates are read from "
+                 "[output]_subparticles.star and [output]_subparticles_subtracted.star")
+
+        # Parameters for "Prepare particles" group
+        addpp('--masked_map',
+              help="Create another set of particles with partial signal subtraction using this map.")
+
+        # Parameters for "Create subparticles" group
+        addcs('--angpix', type=float, default=1, help="Pixel size (A). (default: 1)")
+        addcs('--sym', default="C1", help="Symmetry of the particle. (default: C1)")
+        addcs('--particle_size', type=int,
+              help="Size of the particle box (pixels).")
+        addcs('--randomize', action='store_true',
+              help="Randomize the order of the symmetry matrices. "
+                   "Useful for preventing preferred orientations.")
+        addcs('--relax_symmetry', action='store_true',
+              help="Create one random subparticle for each particle ")
+        addcs('--vector', default="0,0,1", help="Vector defining the location of the subparticle. (default: 0,0,1)")
+        addcs('--align_subparticles', action='store_true',
+              help="Align subparticles to the standard orientation.")
+        addcs('--length',
+              help="Alternative length of the vector. Use to adjust the "
+                 "subparticle center (A). (default: length of the given vector)")
+        addcs('--cmm',
+              help="A CMM file defining the location(s) of the subparticle(s) "
+                 "(use instead of --vector). Coordinates should be in Angstrom.")
+        addcs('--unique', type=float, default=-1,
+              help="Keep only unique subparticles within angular distance "
+                 "(useful to remove overlapping subparticles on symmetry axis).")
+        addcs('--mindist', type=float, default=-1,
+              help="Minimum distance between the subparticles in the image "
+                 "(all overlapping ones will be discarded; pixels).")
+        addcs('--side', type=float, default=-1,
+              help="Keep only particles within specified angular distance from "
+                 "side views (all others will be discarded; degrees).")
+        addcs('--top', type=float, default=-1,
+              help="Keep only particles within specified angular distance from "
+                 "top views (all others will be discarded; degrees).")
+
+        # Parameters for "Extract subparticles" group
+        addes('--subparticle_size', type=int,
+            help="Size of the subparticle box (pixels).")
+        addes('--np', type=int, default=1, help="Number of MPI procs. (default: 1)")
+
+        # Parameters for "Reconstruct subparticles" group
+        addrs('--j', type=int, default=1, help="Number of threads.")
+        addrs('--maxres', type=float, help="Maximum resolution of the reconstruction (A). (default: Nyquist)")
+        addrs('--subsym', default="C1", help="Symmetry of the subparticle. (default: C1)")
 
     def usage(self):
         self.parser.print_help()
@@ -108,6 +140,7 @@ class LocalizedReconstruction():
         sys.exit(2)
 
     def validate(self, args):
+        # Check that required software is in PATH
         if not (spawn.find_executable("scipion")):
             self.error("Scipion not found.",
                        "Make sure Scipion is in $PATH.")
@@ -116,42 +149,49 @@ class LocalizedReconstruction():
             self.error("Relion not found.",
                        "Make sure Relion programs are in $PATH.")
 
-        if len(sys.argv) == 1:
-            self.error("No input file given.")
+        # Check that required parameters are given for each mode
+        if args.prepare_particles or args.create_subparticles or args.extract_subparticles:
+            if len(sys.argv) == 1:
+                self.error("No input particles STAR file given.")
+            if not os.path.exists(args.input_star):
+                self.error("\nInput file '%s' not found." % args.input_star)
 
-        if not os.path.exists(args.input_star):
-            self.error("\nInput file '%s' not found."
-                       % args.input_star)
+        if args.extract_subparticles:
+            if not args.particle_size:
+                self.error("Parameter --particle_size is required.")
+            if not args.subparticle_size:
+                self.error("Parameter --subparticle_size is required.")
+
+        if args.reconstruct_subparticles:
+            if not args.output:
+                self.error("Parameter --output not specified. Cannot find STAR file with subparticles.")
+
+
 
     def main(self):
         self.define_parser()
         args = self.parser.parse_args()
 
-        # Validate input arguments and required software (Scipion and Relion)
+        # Validate input arguments and required software
         self.validate(args)
 
-        particle_size = args.particle_size
-        subpart_image_size = args.subparticle_size
-        output = args.output
-        subtract_masked_map = args.masked_map is not None
-
-        # Load subparticle vectors either from Chimera CMM file or from
-        # command line (command and semi-colon separated)
-        # Distances can also be specified to modify vector lengths
-        subparticle_vector_list = load_vectors(args.cmm, args.vector,
-                                               args.length, args.angpix)
-
-        run_command("mkdir -p " + output, "/dev/null")
+        run_command("mkdir -p " + args.output, "/dev/null")
 
         if args.prepare_particles:
             print "Preparing particles for extracting subparticles."
-            create_initial_stacks(args.input_star, args.angpix, args.masked_map, output)
+            create_initial_stacks(args.input_star, args.angpix, args.masked_map, args.output)
             print "\nFinished preparing the particles!\n"
 
         if args.create_subparticles:
-            particles_star = output + "/particles.star"
+            # Load subparticle vectors either from Chimera CMM file or from
+            # command line (command and semi-colon separated)
+            # Distances can also be specified to modify vector lengths
+            subparticle_vector_list = load_vectors(args.cmm, args.vector,
+                                                   args.length, args.angpix)
 
-            if not os.path.exists(output + "/particles.star"):
+            particles_star = args.output + "/particles.star"
+
+            if not os.path.exists(args.output + "/particles.star"):
                 self.error("Input file '%s not found. "
                            "Run the script first with --prepare_particles option."
                            % particles_star)
@@ -166,8 +206,7 @@ class LocalizedReconstruction():
             symmetry_matrices = matrix_from_symmetry(args.sym)
 
             # Define some conditions to filter subparticles
-            filters = load_filters(radians(args.side), radians(args.top),
-                                  args.mindist)
+            filters = load_filters(radians(args.side), radians(args.top), args.mindist)
 
             # Compute all subparticles (included subtracted if masked_map given)
             mdOut = MetaData()
@@ -177,13 +216,13 @@ class LocalizedReconstruction():
                 subparticles, subtracted = create_subparticles(particle,
                                                        symmetry_matrices,
                                                        subparticle_vector_list,
-                                                       particle_size,
+                                                       args.particle_size,
                                                        args.relax_symmetry,
                                                        args.randomize,
-                                                       output, args.unique,
+                                                       args.output, args.unique,
                                                        len(mdOut),
                                                        args.align_subparticles,
-                                                       subtract_masked_map,
+                                                       args.masked_map,
                                                        filters)
 
 
@@ -193,14 +232,19 @@ class LocalizedReconstruction():
                 progressbar.notify()
 
             md.removeLabels('rlnOriginZ', 'rlnOriginalName')
-            write_output_starfiles(md.getLabels(), mdOut, mdOutSub, output)
+            write_output_starfiles(md.getLabels(), mdOut, mdOutSub, args.output)
 
             print "\nFinished creating the subparticles!\n"
 
         if args.extract_subparticles:
             print "Extracting subparticles..."
-            extract_subparticles(subpart_image_size, args.np, args.masked_map, output, deleteParticles=True)
+            extract_subparticles(args.subparticle_size, args.np, args.masked_map, args.output, deleteParticles=True)
             print "\nFinished extracting the subparticles!\n"
+
+        if args.reconstruct_subparticles:
+            print "Reconstructing subparticles..."
+            reconstruct_subparticles(args.j, args.output, args.maxres, args.subsym)
+            print "\nFinished reconstructing the subparticles!\n"
 
 if __name__ == "__main__":    
     LocalizedReconstruction().main()

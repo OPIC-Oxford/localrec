@@ -423,7 +423,7 @@ def write_output_starfiles(labels, mdOut, mdOutSub, output):
     print "\nWriting output STAR files."
 
     starfile1 = output + ".star"
-    print " Parameters for subparticles: \n      *** %s **" % starfile1
+    print " Subparticles (without subtraction):\t\t%s" % starfile1
     # We convert back angles to degrees and write subparticles star file
     def _writeMd(md, starfile):
         for subpart in md:
@@ -435,9 +435,72 @@ def write_output_starfiles(labels, mdOut, mdOutSub, output):
 
     if len(mdOutSub):
         starfile2 = starfile1.replace('.star', '_subtracted.star')
-        print(" Parameters for subparticles after subtractions: \n"
-              "      *** %s ***" % starfile2)
+        print " Subparticles (with subtraction):\t\t%s" % starfile2
         _writeMd(mdOutSub, starfile2)
+
+
+def split_star_to_random_subsets(inputStarRoot):
+    inputStarName = inputStarRoot+'.star'
+    md = MetaData(inputStarName)
+    mdHalf1 = MetaData()
+    mdHalf2 = MetaData()
+
+    half1StarRoot = inputStarRoot+'_half1'
+    half2StarRoot = inputStarRoot+'_half2'
+
+    half1StarName = half1StarRoot+'.star'
+    half2StarName = half2StarRoot+'.star'
+
+    particlesHalf1 = []
+    particlesHalf2 = []
+
+    for particle in md:
+        if particle.rlnRandomSubset % 2 == 1:
+            particlesHalf1.append(particle.clone())
+        if particle.rlnRandomSubset % 2 == 0:
+            particlesHalf2.append(particle.clone())
+
+    mdHalf1.addData(particlesHalf1)
+    mdHalf2.addData(particlesHalf2)
+    labels = md.getLabels()
+    mdHalf1.addLabels(labels)
+    mdHalf2.addLabels(labels)
+    mdHalf1.write(half1StarName)
+    mdHalf2.write(half2StarName)
+
+    return half1StarRoot, half2StarRoot
+
+
+def reconstruct_subparticles(threads, output, maxres, sym):
+    """ Reconstruct subparticles. Also create two half maps using random subsets. """
+
+    def run_reconstruct(input, suffix='', extraArgs=''):
+        cmd = ('relion_reconstruct ')
+        args = ('--sym %s --j %s %s --o %s%s.mrc --i %s.star') % (sym, threads, extraArgs, output, suffix, input)
+        run_command(cmd + args)
+
+    for input in [output, output+'_subtracted']:
+        args = ""
+        inputStarName = input + '.star'
+        if os.path.exists(inputStarName):
+            md = MetaData(inputStarName)
+
+            if "rlnDefocusU" in md.getLabels():
+                args = args + "--ctf "
+            else:
+                print ("\nWarning: no CTF info found in %s!\n"
+                       "The reconstruction will be performed without CTF correction.\n" % inputStarName)
+
+            # reconstruct random halves to Nyquist frequency
+            if "rlnRandomSubset" in md.getLabels():
+                half1Star, half2Star = split_star_to_random_subsets(input)
+                run_reconstruct(half1Star, "_half1_class001_unfil", args)
+                run_reconstruct(half2Star, "_half2_class001_unfil", args)
+
+            # reconstruct the map to maximum resolution given
+            if maxres:
+                args = args + "--maxres %s " % maxres
+            run_reconstruct(input, '_class001', args)
 
 
 def run_command(command, output=""):
