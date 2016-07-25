@@ -45,7 +45,8 @@ class LocalizedReconstruction():
             description="Localised reconstruction of subparticles. Normally the script is run in three steps:"
                         "1. Prepare particles. "
                         "2. Create subparticles. "
-                        "3. Extract subparticles. ")
+                        "3. Extract subparticles. "
+                        "4. Reconstruct a volume from subparticles.")
         required = self.parser.add_argument_group('required arguments')
         add = self.parser.add_argument  # shortcut
         addr = required.add_argument
@@ -57,9 +58,12 @@ class LocalizedReconstruction():
             help="Calculate the cooridnates and Euler angles for the subparticles.")
         add('--extract_subparticles', action='store_true',
             help="Extract subparticles from particle images.")
+        add('--reconstruct', action='store_true',
+            help="Reconstruct a volume from subparticles.")
         add('--masked_map',
             help="Create another set of particles with partial signal subtraction using this map.")
         addr('--angpix', type=float, help="Pixel size (A).", required=True)
+        add('--maxres', type=float, help="Resolution of the reconstruction (A).")
         add('--sym', help="Symmetry of the particle.")
         addr('--particle_size', type=int, required=True,
             help="Size of the particle box (pixels).")
@@ -68,13 +72,10 @@ class LocalizedReconstruction():
         add('--randomize', action='store_true',
             help="Randomize the order of the symmetry matrices. \n"
                  "Useful for preventing preferred orientations (default: not).")
-        add('--relax_symmetry', action='store_true',
-            help="Create one random subparticle for each particle "
-                 "(default: all symmetry related subparticles).")
         add('--vector', help="Vector defining the location of the subparticle.")
         add('--align_subparticles', action='store_true',
             help="Align subparticles to the standard orientation.")
-        add('--length',
+        add('--length', type=float,
             help="Alternative length of the vector. Use to adjust the "
                  "subparticle center (default: length of the given "
                  "vector; A).")
@@ -96,7 +97,7 @@ class LocalizedReconstruction():
         add('--output', default='subparticles',
             help="Output root for results.")
         add('--j', type=int, default=8, help="Number of threads.")
-        add('--np', type=int, default=4, help="Number of MPI procs.")
+        add('--np', type=int, default=1, help="Number of MPI procs.")
 
     def usage(self):
         self.parser.print_help()
@@ -184,8 +185,8 @@ class LocalizedReconstruction():
                                                        len(mdOut),
                                                        args.align_subparticles,
                                                        subtract_masked_map,
+                                                       True, # create star files
                                                        filters)
-
 
                 mdOut.addData(subparticles)
                 mdOutSub.addData(subtracted)
@@ -199,8 +200,10 @@ class LocalizedReconstruction():
 
         if args.extract_subparticles:
             print "Extracting subparticles..."
-            extract_subparticles(subpart_image_size, args.np, args.masked_map, output, deleteParticles=True)
+            extract_subparticles(subpart_image_size, args.np, args.masked_map,
+                                 output, deleteParticles=True)
             print "\nFinished extracting the subparticles!\n"
+
 
 if __name__ == "__main__":    
     LocalizedReconstruction().main()

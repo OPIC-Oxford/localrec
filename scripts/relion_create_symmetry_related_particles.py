@@ -28,6 +28,7 @@ from pyrelion import MetaData
 from localrec import *
 import argparse
 
+
 class CreateSymmetryRelatedParticles():
     def define_parser(self):
         self.parser = argparse.ArgumentParser(
@@ -38,7 +39,7 @@ class CreateSymmetryRelatedParticles():
 
         add('input_star', help="Input STAR filename with particles.")
         add('--sym', default="C1", help="Symmetry of the particle.")
-        addr('--output', required = True, help="Output STAR filename.")
+        addr('--output', required=True, help="Output STAR filename.")
 
     def usage(self):
         self.parser.print_help()
@@ -49,7 +50,6 @@ class CreateSymmetryRelatedParticles():
         print " "
         sys.exit(2)
 
-
     def validate(self, args):
         if len(sys.argv) == 1:
             self.error("Error: No input file given.")
@@ -57,7 +57,6 @@ class CreateSymmetryRelatedParticles():
         if not os.path.exists(args.input_star):
             self.error("Error: Input file '%s' not found."
                        % args.input_star)
-
 
     def main(self):
         self.define_parser()
@@ -77,26 +76,13 @@ class CreateSymmetryRelatedParticles():
 
         for particle in md:
             angles_to_radians(particle)
-            rot = -particle.rlnAnglePsi
-            tilt = -particle.rlnAngleTilt
-            psi = -particle.rlnAngleRot
-            matrix_particle = matrix_from_euler(rot, tilt, psi)
-
-            for symmetry_matrix in symmetry_matrices:
-                m = matrix_multiply(symmetry_matrix, matrix_particle)
-                rotNew, tiltNew, psiNew = euler_from_matrix(m)
-
-                new_particle = particle.clone()
-                new_particle.rlnAngleRot = -psiNew
-                new_particle.rlnAngleTilt = -tiltNew
-                new_particle.rlnAnglePsi = -rotNew
-                angles_to_degrees(new_particle)
-                new_particles.append(new_particle)
-
+            new_particles.extend(create_symmetry_related_particles(particle,
+                                                                   symmetry_matrices))
         mdOut.addData(new_particles)
         mdOut.write(args.output)
 
         print "All done!"
+
 
 if __name__ == "__main__":
 
