@@ -231,9 +231,7 @@ def create_symmetry_related_particles(particle, symmetry_matrices,
                                       keep_one=False):
     """ Return all related particles from the given symmetry matrices.
     If keep_one is True, randomly select only one of these equivalent
-    particles.
-    NOTE: Input particle should already contains angles in radians.
-    """
+    particles. NOTE: Input particle should already contains angles in radians. """
     new_particles = []
 
     rot = -particle.rlnAnglePsi

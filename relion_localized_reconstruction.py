@@ -217,15 +217,14 @@ class LocalizedReconstruction():
                                                        symmetry_matrices,
                                                        subparticle_vector_list,
                                                        args.particle_size,
-                                                       args.relax_symmetry,
                                                        args.randomize,
+                                                       args.relax_symmetry,
                                                        args.output, args.unique,
                                                        len(mdOut),
                                                        args.align_subparticles,
-                                                       True,
                                                        args.masked_map,
+                                                       True,
                                                        filters)
-
 
                 mdOut.addData(subparticles)
                 mdOutSub.addData(subtracted)
