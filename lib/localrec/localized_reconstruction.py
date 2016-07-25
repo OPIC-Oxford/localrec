@@ -451,7 +451,7 @@ def write_output_starfiles(labels, mdOut, mdOutSub, output):
     print "\nWriting output STAR files."
 
     starfile1 = output + ".star"
-    print " Parameters for subparticles: \n      *** %s **" % starfile1
+    print " Subparticles (without subtraction):\t\t%s" % starfile1
     # We convert back angles to degrees and write subparticles star file
     def _writeMd(md, starfile):
         for subpart in md:
@@ -463,8 +463,7 @@ def write_output_starfiles(labels, mdOut, mdOutSub, output):
 
     if len(mdOutSub):
         starfile2 = starfile1.replace('.star', '_subtracted.star')
-        print(" Parameters for subparticles after subtractions: \n"
-              "      *** %s ***" % starfile2)
+        print " Subparticles (with subtraction):\t\t%s" % starfile2
         _writeMd(mdOutSub, starfile2)
 
 

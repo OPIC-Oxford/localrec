@@ -222,7 +222,7 @@ class LocalizedReconstruction():
                                                        args.output, args.unique,
                                                        len(mdOut),
                                                        args.align_subparticles,
-                                                       True, # create star files
+                                                       True,
                                                        args.masked_map,
                                                        filters)
 
