@@ -211,20 +211,20 @@ def create_subparticles(particle, symmetry_matrices, subparticle_vector_list,
                 subparticles_total += 1
 
     if subtract_masked_map:
-        subtracted = clone_subtracted_subparticles(subparticles)
+        subtracted = clone_subtracted_subparticles(subparticles, output)
 
     # To preserve numbering, ALL sub-particles are written to STAR files before filtering
     if do_create_star:
         starfile = "%s/%s.star" % (output, part_filename)
         create_star(subparticles, starfile)
         if subtract_masked_map:
-            create_star(subtracted, add_suffix(starfile))
+            create_star(subtracted, add_suffix(starfile, output))
 
     if filters:
         subparticles = filter_subparticles(subparticles, filters)
 
         if subtract_masked_map:
-            subtracted = clone_subtracted_subparticles(subparticles)
+            subtracted = clone_subtracted_subparticles(subparticles, output)
 
     return subparticles, subtracted
 
@@ -258,20 +258,21 @@ def create_symmetry_related_particles(particle, symmetry_matrices,
     return new_particles
 
 
-def clone_subtracted_subparticles(subparticles):
+def clone_subtracted_subparticles(subparticles, output):
     subparticles_subtracted = []
 
     for sp in subparticles:
         sp_new = sp.clone()
-        sp_new.rlnImageName = add_suffix(sp.rlnImageName)
-        sp_new.rlnMicrographName = add_suffix(sp.rlnMicrographName)
+        sp_new.rlnImageName = add_suffix(sp.rlnImageName, output)
+        sp_new.rlnMicrographName = add_suffix(sp.rlnMicrographName, output)
         subparticles_subtracted.append(sp_new)
 
     return subparticles_subtracted
 
 
-def add_suffix(filename):
-    return filename.replace('particles_', 'particles_subtracted_')
+def add_suffix(filename, output='particles'):
+    return filename.replace('%s_' % output,
+                            '%s_subtracted_' % output)
 
 
 def create_star(subparticles, star_filename):
