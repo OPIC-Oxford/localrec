@@ -537,22 +537,27 @@ def run_command(command, output=""):
 
 
 class ProgressBar():
-    """ Implements a simple command line progress bar.
-    Still need fixing, now the shark swims too far..."""
+    """ Implements a simple command line progress bar
+    with a big fish catching a small fish.
+    Works nicely only if the number of iterations is larger than the width. """
 
-    def __init__(self, width, percent, total):
-        # setup toolbar
+    def __init__(self, width, total):
+        # hide cursor
+        sys.stdout.write("\033[?25l")
+        # setup progressbar
         self.width = width
-        sys.stdout.write("%s>->o" % ("_" * width))
+        sys.stdout.write("%s><^>" % ("~" * width))
         sys.stdout.flush()
-        sys.stdout.write("\b" * (width))
+        sys.stdout.write("\b" * width)
         self.count = 0  # total count
         self.c = 0  # progress count
-        self.percent = percent
-        self.timer = percent
+        self.n = 0 # total count
+        self.percent = 1.0/width
+        self.timer = self.percent
         self.total = total
 
     def notify(self):
+        self.n += 1
         if self.count == int(self.total * self.timer):
             sys.stdout.write("\b" * (self.c + 8))
             sys.stdout.write("~" * self.c)
@@ -560,5 +565,8 @@ class ProgressBar():
             sys.stdout.flush()
             self.timer += self.percent
             self.c += 1
-
+        if self.n == int(self.total):
+            # restore cursor
+            sys.stdout.write("\033[?25h")
+            sys.stdout.flush()
         self.count += 1
