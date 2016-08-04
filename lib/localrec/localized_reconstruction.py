@@ -360,7 +360,7 @@ def scipion_split_particle_stacks(inputStar, inputStack, output, filename_prefix
     md.addLabels('rlnOriginalName')
 
     # Initialize progress bar
-    progressbar = ProgressBar(width=70, percent=0.01, total=len(md))
+    progressbar = ProgressBar(width=60, total=len(md))
 
     for i, particle in enumerate(md, start=1):
         outputImageName = '%s/%s_%06d.mrc' % (output, filename_prefix, i)
