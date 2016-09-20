@@ -241,7 +241,7 @@ class LocalizedReconstruction():
 
         if args.reconstruct_subparticles:
             print "Reconstructing subparticles..."
-            reconstruct_subparticles(args.j, args.output, args.maxres, args.subsym)
+            reconstruct_subparticles(args.j, args.output, args.maxres, args.subsym, args.angpix)
             print "\nFinished reconstructing the subparticles!\n"
 
         print "\nAll done!\n"

@@ -495,12 +495,12 @@ def split_star_to_random_subsets(inputStarRoot):
     return half1StarRoot, half2StarRoot
 
 
-def reconstruct_subparticles(threads, output, maxres, sym):
+def reconstruct_subparticles(threads, output, maxres, sym, angpix):
     """ Reconstruct subparticles. Also create two half maps using random subsets. """
 
     def run_reconstruct(input, suffix='', extraArgs=''):
         cmd = ('relion_reconstruct ')
-        args = ('--sym %s --j %s %s --o %s%s.mrc --i %s.star') % (sym, threads, extraArgs, output, suffix, input)
+        args = ('--sym %s --j %s %s --o %s%s.mrc --i %s.star --angpix %s') % (sym, threads, extraArgs, output, suffix, input, angpix)
         run_command(cmd + args)
 
     for input in [output, output+'_subtracted']:
