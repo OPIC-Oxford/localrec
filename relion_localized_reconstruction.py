@@ -140,6 +140,8 @@ class LocalizedReconstruction():
         sys.exit(2)
 
     def validate(self, args):
+        if len(sys.argv) == 1:
+            self.usage()
         # Check that required software is in PATH
         if not (spawn.find_executable("scipion")):
             self.error("Scipion not found.",
