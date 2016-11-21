@@ -218,7 +218,11 @@ def create_subparticles(particle, symmetry_matrices, subparticle_vector_list,
         starfile = "%s/%s.star" % (output, part_filename)
         create_star(subparticles, starfile)
         if subtract_masked_map:
+<<<<<<< HEAD
             create_star(subtracted, add_suffix(starfile, 'particles'))
+=======
+            create_star(subtracted, add_suffix(starfile, output))
+>>>>>>> remotes/origin/devel
 
     if filters:
         subparticles = filter_subparticles(subparticles, filters)
@@ -263,9 +267,14 @@ def clone_subtracted_subparticles(subparticles, output):
 
     for sp in subparticles:
         sp_new = sp.clone()
+<<<<<<< HEAD
 
         sp_new.rlnImageName = add_suffix(sp.rlnImageName, 'particles')
         sp_new.rlnMicrographName = add_suffix(sp.rlnMicrographName, 'particles')
+=======
+        sp_new.rlnImageName = add_suffix(sp.rlnImageName, output)
+        sp_new.rlnMicrographName = add_suffix(sp.rlnMicrographName, output)
+>>>>>>> remotes/origin/devel
         subparticles_subtracted.append(sp_new)
 
     return subparticles_subtracted
@@ -496,12 +505,12 @@ def split_star_to_random_subsets(inputStarRoot):
     return half1StarRoot, half2StarRoot
 
 
-def reconstruct_subparticles(threads, output, maxres, sym):
+def reconstruct_subparticles(threads, output, maxres, sym, angpix):
     """ Reconstruct subparticles. Also create two half maps using random subsets. """
 
     def run_reconstruct(input, suffix='', extraArgs=''):
         cmd = ('relion_reconstruct ')
-        args = ('--sym %s --j %s %s --o %s%s.mrc --i %s.star') % (sym, threads, extraArgs, output, suffix, input)
+        args = ('--sym %s --j %s %s --o %s%s.mrc --i %s.star --angpix %s') % (sym, threads, extraArgs, output, suffix, input, angpix)
         run_command(cmd + args)
 
     for input in [output, output+'_subtracted']:
@@ -570,4 +579,8 @@ class ProgressBar():
             # restore cursor
             sys.stdout.write("\033[?25h")
             sys.stdout.flush()
+<<<<<<< HEAD
         self.count += 1
+=======
+        self.count += 1
+>>>>>>> remotes/origin/devel

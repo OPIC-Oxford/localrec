@@ -198,7 +198,7 @@ class LocalizedReconstruction():
             print "Creating subparticles..."
 
             # Initialize progress bar
-            progressbar = ProgressBar(width=70, percent=0.01, total=len(md))
+            progressbar = ProgressBar(width=60, total=len(md))
 
             # Generate symmetry matrices with Relion convention
             symmetry_matrices = matrix_from_symmetry(args.sym)
@@ -241,8 +241,10 @@ class LocalizedReconstruction():
 
         if args.reconstruct_subparticles:
             print "Reconstructing subparticles..."
-            reconstruct_subparticles(args.j, args.output, args.maxres, args.subsym)
+            reconstruct_subparticles(args.j, args.output, args.maxres, args.subsym, args.angpix)
             print "\nFinished reconstructing the subparticles!\n"
+
+        print "\nAll done!\n"
 
 if __name__ == "__main__":
     LocalizedReconstruction().main()
