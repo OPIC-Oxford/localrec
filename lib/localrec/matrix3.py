@@ -24,7 +24,7 @@
 # **************************************************************************
 
 import os
-from math import * 
+from math import *
 
 
 class Matrix3:
@@ -67,6 +67,15 @@ class Matrix3:
         print("%.6f\t"%(m[2][0])),
         print("%.6f\t"%(m[2][1])),
         print("%.6f\t"%(m[2][2]))
+
+
+def run_command(command, output=""):
+    if not output:
+        print "+++ " + command
+        sys.stdout.flush()
+        os.system(command)
+    else:
+        os.system(command + " > " + output)
 
 
 def matrix_from_euler(rot, tilt, psi):
@@ -147,7 +156,7 @@ def relion_create_symmetry_ops_file(symString, filename):
     """ Create a symmetry operator file
     by running relion_refine --print_symmetry_ops """
     from pyworkflow.em import runProgram
-    runProgram("relion_refine", "--sym %s --print_symmetry_ops > %s"
+    run_command("relion_refine", "--sym %s --print_symmetry_ops > %s"
               % (symString, filename))
 
 
