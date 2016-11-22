@@ -218,11 +218,7 @@ def create_subparticles(particle, symmetry_matrices, subparticle_vector_list,
         starfile = "%s/%s.star" % (output, part_filename)
         create_star(subparticles, starfile)
         if subtract_masked_map:
-<<<<<<< HEAD
-            create_star(subtracted, add_suffix(starfile, 'particles'))
-=======
-            create_star(subtracted, add_suffix(starfile, output))
->>>>>>> remotes/origin/devel
+            create_star(subtracted, add_suffix(starfile))
 
     if filters:
         subparticles = filter_subparticles(subparticles, filters)
@@ -267,14 +263,8 @@ def clone_subtracted_subparticles(subparticles, output):
 
     for sp in subparticles:
         sp_new = sp.clone()
-<<<<<<< HEAD
-
-        sp_new.rlnImageName = add_suffix(sp.rlnImageName, 'particles')
-        sp_new.rlnMicrographName = add_suffix(sp.rlnMicrographName, 'particles')
-=======
-        sp_new.rlnImageName = add_suffix(sp.rlnImageName, output)
-        sp_new.rlnMicrographName = add_suffix(sp.rlnMicrographName, output)
->>>>>>> remotes/origin/devel
+        sp_new.rlnImageName = add_suffix(sp.rlnImageName)
+        sp_new.rlnMicrographName = add_suffix(sp.rlnMicrographName)
         subparticles_subtracted.append(sp_new)
 
     return subparticles_subtracted
@@ -579,8 +569,5 @@ class ProgressBar():
             # restore cursor
             sys.stdout.write("\033[?25h")
             sys.stdout.flush()
-<<<<<<< HEAD
+
         self.count += 1
-=======
-        self.count += 1
->>>>>>> remotes/origin/devel
