@@ -156,7 +156,6 @@ def matrix_from_symmetry(symString):
 def relion_create_symmetry_ops_file(symString, filename):
     """ Create a symmetry operator file
     by running relion_refine --print_symmetry_ops """
-    from pyworkflow.em import runProgram
     run_command("relion_refine --sym %s --print_symmetry_ops "
               % (symString), filename)
 
