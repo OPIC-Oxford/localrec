@@ -82,7 +82,7 @@ class CreateSymmetryRelatedParticles():
         mdOut.write(args.output)
 
         print "All done!"
-
+        print " "
 
 if __name__ == "__main__":
 
