@@ -2,7 +2,7 @@
 
 # **************************************************************************
 # *
-# * Authors:  Serban Ilca
+# * Authors:  Serban Ilca (serban@strubi.ox.ac.uk)
 # *           Juha T. Huiskonen (juha@strubi.ox.ac.uk)
 # *           J.M. de la Rosa Trevin
 # *
