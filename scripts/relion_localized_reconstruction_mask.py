@@ -2,7 +2,7 @@
 
 # **************************************************************************
 # *
-# * Authors:  Serban Ilca (serban@strubi.ox.ac.uk)
+# * Authors:  Serban Ilca
 # *           Juha T. Huiskonen (juha@strubi.ox.ac.uk)
 # *           J.M. de la Rosa Trevin
 # *
@@ -74,11 +74,6 @@ class LocalizedReconstructionMask():
         print " "
         sys.exit(2)
 
-    def validate(self, args):
-        if not (spawn.find_executable("bimg")):
-            self.error("Error: Bsoft not found.",
-                       "Make sure Bsoft programs are in $PATH.")
-
     def main(self):
         self.define_parser()
         args = self.parser.parse_args()
@@ -97,38 +92,7 @@ class LocalizedReconstructionMask():
         v = subparticle_vector_list[0]
         d = v.distance()
 
-        # Bsoft's way
-        mask_x = v.x() * d + half
-        mask_y = v.y() * d + half
-        mask_z = v.z() * d + half
-
-        print "Creating a mask at the end point of the vector..."
-
-        runProgram("beditimg",
-                   "-create %s,%s,%s -sphere %s,%s,%s,%s -edge %d -fill 1 mask.mrc"
-                    % (size, size, size, mask_x, mask_y, mask_z,
-                       args.radius, args.edge))
-
-        if args.sym:
-            print "Symmetrizing the mask..."
-            runProgram("bsym", "-origin %s,%s,%s -sym %s mask.mrc mask_%s.mrc"
-                       % (half, half, half, args.sym, args.sym))
-
-        print "Inverting the mask(s)..."
-
-        def invertMask(fn):
-            runProgram("bar", "-multiply -1 -add 1 %s %s" % (fn, fn))
-
-        invertMask("mask.mrc")
-
-        if args.sym:
-            invertMask("mask_%s.mrc" % args.sym)
-
-        # Xmipp's way.
-        # Let's create a phantom description file with the sphere in the
-        # desired position and symmetrize it. We can set the background to 1
-        # and subtract the sphere value (equivalent to mask invert)
-        maskFn = 'xmask.mrc'
+        maskFn = 'mask.mrc'
         v.scale(d)
         phantomFn = 'phantom.descr'
         phantomFile = open(phantomFn, 'w')
@@ -151,8 +115,7 @@ class LocalizedReconstructionMask():
 
         print "All done!"
         print " "
-        print "Use the following command to apply the mask on your particle:"
-        print "bop -multiply 1,0 mask.mrc particle.mrc particle_masked.mrc"
+        print "Apply the mask mask.mrc on your particle."
         print "The masked particle can be used for partial signal subtraction for localized reconstruction."
         print " "
 
