@@ -155,7 +155,8 @@ def matrix_from_symmetry(symString):
 
 def relion_create_symmetry_ops_file(symString, filename):
     """ Create a symmetry operator file
-    by running relion_refine --print_symmetry_ops """
+    by running relion_refine --print_symmetry_ops.
+    Notice that this command line works only in Relion 1.4, not 2.0"""
     run_command("relion_refine --sym %s --print_symmetry_ops "
               % (symString), filename)
 
