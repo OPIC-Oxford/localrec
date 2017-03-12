@@ -415,7 +415,8 @@ def create_initial_stacks(input_star, angpix, masked_map, output):
 
 def extract_subparticles(subpart_size, np, masked_map, output, deleteParticles):
     """ Extract subparticles images from each particle
-    (Using 'relion_preprocess' as if the particle was a micrograph. """
+    (Using 'relion_preprocess' as if the particle was a micrograph.
+    Notice that this command line works only in Relion 1.4, not 2.0"""
 
     if np == 1:
         cmd = 'relion_preprocess '
