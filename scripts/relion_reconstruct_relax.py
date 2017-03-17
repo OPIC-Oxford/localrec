@@ -74,7 +74,9 @@ class ReconstructRelaxSymmetry():
         md = MetaData(args.input_star)
         mdOut = MetaData()
         mdOut.addLabels(md.getLabels())
-        
+        mdOut.addLabels('rlnAngleRotPrior','rlnAngleTiltPrior','rlnAnglePsiPrior')
+        mdOut.removeLabels('rlnOriginalParticleName', 'rlnParticleName')
+
         new_particles = []
 
         symmetry_matrices = matrix_from_symmetry(args.sym)
@@ -83,10 +85,16 @@ class ReconstructRelaxSymmetry():
             angles_to_radians(particle)
             new_particles.extend(create_symmetry_related_particles(particle, symmetry_matrices, True))
         mdOut.addData(new_particles)
+
+        for particle in mdOut:
+            particle.rlnAngleRotPrior = particle.rlnAngleRot
+            particle.rlnAngleTiltPrior = particle.rlnAngleTilt
+            particle.rlnAnglePsiPrior = particle.rlnAnglePsi
+
         mdOut.write(args.output)
 
         print "Calculating an asymmetric reconstruction..."
-        runProgram('relion_reconstruct', '--i %s --o %s --ctf --sym C1 --anpix %s --maxres %s --j %s'
+        runProgram('relion_reconstruct', '--i %s --o %s --ctf --sym C1 --angpix %s --maxres %s --j %s'
                              % (args.output, args.map, args.angpix, args.maxres, args.j))
 
 
