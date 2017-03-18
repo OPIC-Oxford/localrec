@@ -236,19 +236,32 @@ def create_symmetry_related_particles(particle, symmetry_matrices,
     particles. NOTE: Input particle should already contains angles in radians. """
     new_particles = []
 
-    rot = -particle.rlnAnglePsi
-    tilt = -particle.rlnAngleTilt
-    psi = -particle.rlnAngleRot
+    # Do not swap and negate the angles, transpose the symmetry matrix instead
+    # rot = -particle.rlnAnglePsi
+    # tilt = -particle.rlnAngleTilt
+    # psi = -particle.rlnAngleRot
+
+    rot = particle.rlnAngleRot
+    tilt = particle.rlnAngleTilt
+    psi = particle.rlnAnglePsi
+
     matrix_particle = matrix_from_euler(rot, tilt, psi)
 
     for symmetry_matrix in symmetry_matrices:
-        m = matrix_multiply(symmetry_matrix, matrix_particle)
+        # Do not swap and negate the angles, transpose the symmetry matrix instead
+        #m = matrix_multiply(symmetry_matrix, matrix_particle)
+        m = matrix_multiply(matrix_particle, matrix_transpose(symmetry_matrix))
         rotNew, tiltNew, psiNew = euler_from_matrix(m)
 
         new_particle = particle.clone()
-        new_particle.rlnAngleRot = -psiNew
-        new_particle.rlnAngleTilt = -tiltNew
-        new_particle.rlnAnglePsi = -rotNew
+        # Do not swap and negate the angles, transpose the symmetry matrix instead
+        #new_particle.rlnAngleRot = -psiNew
+        #new_particle.rlnAngleTilt = -tiltNew
+        #new_particle.rlnAnglePsi = -rotNew
+
+        new_particle.rlnAngleRot = rotNew
+        new_particle.rlnAngleTilt = tiltNew
+        new_particle.rlnAnglePsi = psiNew
         angles_to_degrees(new_particle)
         new_particles.append(new_particle)
 
