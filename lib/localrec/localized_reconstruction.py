@@ -139,9 +139,11 @@ def create_subparticles(particle, symmetry_matrices, subparticle_vector_list,
     angles_to_radians(particle)
 
     # Euler angles that take particle to the orientation of the model
-    rot = -particle.rlnAnglePsi
-    tilt = -particle.rlnAngleTilt
-    psi = -particle.rlnAngleRot
+
+    rot = particle.rlnAngleRot
+    tilt = particle.rlnAngleTilt
+    psi = particle.rlnAnglePsi
+
     matrix_particle = matrix_from_euler(rot, tilt, psi)
 
     subparticles = []
@@ -165,24 +167,25 @@ def create_subparticles(particle, symmetry_matrices, subparticle_vector_list,
 
             subpart = particle.clone()
 
-            m = matrix_multiply((matrix_multiply(matrix_from_subparticle_vector,
-                                                 symmetry_matrix)), matrix_particle)
+            ####the relion way####
+            m = matrix_multiply(matrix_particle, (matrix_multiply(matrix_transpose(symmetry_matrix), matrix_transpose(matrix_from_subparticle_vector))))
 
             if align_subparticles:
                 rotNew, tiltNew, psiNew = euler_from_matrix(m)
             else:
-                m2 = matrix_multiply(symmetry_matrix, matrix_particle)
+                m2 = matrix_multiply(matrix_particle, matrix_transpose(symmetry_matrix))
                 rotNew, tiltNew, psiNew = euler_from_matrix(m2)
 
             # save Euler angles that take the model to the orientation of the subparticle
-            subpart.rlnAngleRot = -psiNew
-            subpart.rlnAngleTilt = -tiltNew
-            subpart.rlnAnglePsi = -rotNew
+
+            subpart.rlnAngleRot = rotNew
+            subpart.rlnAngleTilt = tiltNew
+            subpart.rlnAnglePsi = psiNew
 
             # subparticle origin
             d = subparticle_vector.distance()
-            x = -m.m[2][0] * d + particle.rlnOriginX
-            y = -m.m[2][1] * d + particle.rlnOriginY
+            x = -m.m[0][2] * d + particle.rlnOriginX
+            y = -m.m[1][2] * d + particle.rlnOriginY
             z = -m.m[2][2] * d
 
             # modify the subparticle defocus paramaters by its z location
