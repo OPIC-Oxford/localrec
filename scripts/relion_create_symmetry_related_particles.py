@@ -39,7 +39,7 @@ class CreateSymmetryRelatedParticles():
 
         add('input_star', help="Input STAR filename with particles.")
         add('--sym', default="C1", help="Symmetry of the particle.")
-        add('--random', default="False", help="Keep just one of the symmetry related views.")
+        add('--random', action='store_true', default="False", help="Keep just one of the symmetry related views.")
         addr('--output', required=True, help="Output STAR filename.")
 
     def usage(self):
