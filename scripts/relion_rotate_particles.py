@@ -38,7 +38,8 @@ class CreateSymmetryRelatedParticles():
         addr = required.add_argument
 
         add('input_star', help="Input STAR filename with particles.")
-        add('--vector', default="0,0,1", help="Vector defining the rotation to the Z-axis.")
+        add('--vector', default=None, help="Vector defining the additional rotation of the particles (x, y, z).")
+        add('--angles', default=[], help="Euler angles defining the additional rotation of the particles (rot, tilt, psi).")
         addr('--output', required=True, help="Output STAR filename.")
 
     def usage(self):
@@ -64,12 +65,28 @@ class CreateSymmetryRelatedParticles():
 
         self.validate(args)
 
-        print "Creating symmetry related particles..."
+        print "Creating rotated particles..."
 
         md = MetaData(args.input_star)
 
-        vector = load_vectors(None, args.vector, None, 1)
-        matrix_from_vector = vector.matrix()
+        if args.vector and len(args.angles) != 0:
+            print "Please only provide a vector or a triplet of Euler angles for the particle rotation."
+            sys.exit(0)
+        elif args.vector:
+            vector = load_vectors(None, args.vector, None, 1)
+            rot_matrix = vector.matrix()
+        elif len(args.angles) != 0:
+            if len(args.angles) != 3:
+                print "Please provide exactly 3 Euler angles for the particle rotation."
+                sys.exit(0)
+            else:
+                rot_rot = args.angles[0]
+                rot_tilt = args.angles[1]
+                rot_psi = args.angles[2]
+                rot_matrix = matrix_from_euler(rot_rot, rot_tilt, rot_psi)
+        else:
+            print "Please provide a vector or a triplet of Euler angles for the particle rotation."
+            sys.exit(0)
 
         for particle in md:
             angles_to_radians(particle)
@@ -80,7 +97,7 @@ class CreateSymmetryRelatedParticles():
 
             matrix_particle = matrix_from_euler(rot, tilt, psi)
 
-            m = matrix_multiply(matrix_particle, matrix_transpose(matrix_from_vector))
+            m = matrix_multiply(matrix_particle, matrix_transpose(rot_matrix))
             rotNew, tiltNew, psiNew = euler_from_matrix(m)
 
             particle.rlnAngleRot = rotNew
