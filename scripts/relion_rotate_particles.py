@@ -84,6 +84,9 @@ class CreateSymmetryRelatedParticles():
                 rot_rot = math.radians(float(angles[0]))
                 rot_tilt = math.radians(float(angles[1]))
                 rot_psi = math.radians(float(angles[2]))
+                print rot_rot
+                print rot_tilt
+                print rot_psi
                 rot_matrix = matrix_from_euler(rot_rot, rot_tilt, rot_psi)
         else:
             print "Please provide a vector or a triplet of Euler angles for the particle rotation."
