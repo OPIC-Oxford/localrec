@@ -108,6 +108,11 @@ class CreateSymmetryRelatedParticles():
             particle.rlnAngleTilt = tiltNew
             particle.rlnAnglePsi = psiNew
 
+            print new_particle.rlnAngleRot
+            print new_particle.rlnAngleTilt
+            print new_particle.rlnAnglePsi
+            sys.exit(0)
+
         md.write(args.output)
 
         print "All done!"
