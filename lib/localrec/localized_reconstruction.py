@@ -167,7 +167,6 @@ def create_subparticles(particle, symmetry_matrices, subparticle_vector_list,
 
             subpart = particle.clone()
 
-            ####the relion way####
             m = matrix_multiply(matrix_particle, (matrix_multiply(matrix_transpose(symmetry_matrix), matrix_transpose(matrix_from_subparticle_vector))))
 
             if align_subparticles:
@@ -239,11 +238,6 @@ def create_symmetry_related_particles(particle, symmetry_matrices,
     particles. NOTE: Input particle should already contains angles in radians. """
     new_particles = []
 
-    # Do not swap and negate the angles, transpose the symmetry matrix instead
-    # rot = -particle.rlnAnglePsi
-    # tilt = -particle.rlnAngleTilt
-    # psi = -particle.rlnAngleRot
-
     rot = particle.rlnAngleRot
     tilt = particle.rlnAngleTilt
     psi = particle.rlnAnglePsi
@@ -251,16 +245,10 @@ def create_symmetry_related_particles(particle, symmetry_matrices,
     matrix_particle = matrix_from_euler(rot, tilt, psi)
 
     for symmetry_matrix in symmetry_matrices:
-        # Do not swap and negate the angles, transpose the symmetry matrix instead
-        #m = matrix_multiply(symmetry_matrix, matrix_particle)
         m = matrix_multiply(matrix_particle, matrix_transpose(symmetry_matrix))
         rotNew, tiltNew, psiNew = euler_from_matrix(m)
 
         new_particle = particle.clone()
-        # Do not swap and negate the angles, transpose the symmetry matrix instead
-        #new_particle.rlnAngleRot = -psiNew
-        #new_particle.rlnAngleTilt = -tiltNew
-        #new_particle.rlnAnglePsi = -rotNew
 
         new_particle.rlnAngleRot = rotNew
         new_particle.rlnAngleTilt = tiltNew
