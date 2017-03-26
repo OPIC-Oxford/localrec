@@ -105,11 +105,14 @@ class CreateSymmetryRelatedParticles():
             m = matrix_multiply(matrix_particle, matrix_transpose(rot_matrix))
             rotNew, tiltNew, psiNew = euler_from_matrix(m)
 
+            rotNew = math.degrees(rotNew)
+            tiltNew = math.degrees(tiltNew)
+            psiNew = math.degrees(psiNew)
+
+
             new_particle.rlnAngleRot = rotNew
             new_particle.rlnAngleTilt = tiltNew
             new_particle.rlnAnglePsi = psiNew
-
-            angles_to_degrees(new_particle)
 
         md.write(args.output)
 
