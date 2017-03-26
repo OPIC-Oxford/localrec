@@ -81,9 +81,9 @@ class CreateSymmetryRelatedParticles():
                 print "Please provide exactly 3 Euler angles for the particle rotation."
                 sys.exit(0)
             else:
-                rot_rot = math.radians(angles[0])
-                rot_tilt = math.radians(angles[1])
-                rot_psi = math.radians(angles[2])
+                rot_rot = math.radians(float(angles[0]))
+                rot_tilt = math.radians(float(angles[1])
+                rot_psi = math.radians(float(angles[2]))
                 rot_matrix = matrix_from_euler(rot_rot, rot_tilt, rot_psi)
         else:
             print "Please provide a vector or a triplet of Euler angles for the particle rotation."
