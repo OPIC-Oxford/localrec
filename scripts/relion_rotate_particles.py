@@ -93,8 +93,10 @@ class CreateSymmetryRelatedParticles():
             sys.exit(0)
 
         for particle in md:
-            angles_to_radians(particle)
 
+
+            angles_to_radians(particle)
+            new_particle = copy.deepcopy(particle)
             rot = particle.rlnAngleRot
             tilt = particle.rlnAngleTilt
             psi = particle.rlnAnglePsi
