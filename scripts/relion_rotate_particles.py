@@ -82,7 +82,7 @@ class CreateSymmetryRelatedParticles():
                 sys.exit(0)
             else:
                 rot_rot = math.radians(float(angles[0]))
-                rot_tilt = math.radians(float(angles[1])
+                rot_tilt = math.radians(float(angles[1]))
                 rot_psi = math.radians(float(angles[2]))
                 rot_matrix = matrix_from_euler(rot_rot, rot_tilt, rot_psi)
         else:
