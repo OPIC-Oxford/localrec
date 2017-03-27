@@ -30,7 +30,9 @@ from matrix3 import matrix_from_euler
 
 
 class Vector3:
-    """define Vector3 class and method to obtain individual vectors from lists with 3 values"""
+    """ Define Vector3 class and method to obtain individual vectors from
+    lists with 3 values.
+    """
 
     def __init__(self, v):
         if v == None:
@@ -59,6 +61,9 @@ class Vector3:
     def matrix(self):
         return self._matrix
 
+    def data(self):
+        return self.v
+
     def print_vector(self):
         x, y, z = self.v
         print("[%.3f,%.3f,%.3f]"%(x, y, z)),
@@ -72,14 +77,17 @@ class Vector3:
 
     def normalize(self):
         try:
-            magnitude = self.length()
-            self.v[0] = self.v[0] / magnitude
-            self.v[1] = self.v[1] / magnitude
-            self.v[2] = self.v[2] / magnitude
+            self.scale(1./self.length())
         except ZeroDivisionError:
             self.v[0] = 0
             self.v[1] = 0
             self.v[2] = 0
+
+    def scale(self, distance):
+        """ Multiply the vector elements by the distance """
+        self.v[0] *= distance
+        self.v[1] *= distance
+        self.v[2] *= distance
 
     def x(self):
         return self.v[0]
@@ -89,6 +97,13 @@ class Vector3:
 
     def z(self):
         return self.v[2]
+
+    def __getitem__(self, i):
+        """ Allow v[i] syntax with the vector. """
+        return self.v[i]
+
+    def clone(self):
+        return Vector3(list(self.v))
 
 
 def dot_product(v1, v2):
@@ -110,7 +125,13 @@ def cross_product(v1, v2):
     y = z1 * x2 - z2 * x1
     z = x1 * y2 - x2 * y1
 
-    return Vector3([x,y,z]) 
+    return Vector3([x,y,z])
+
+
+def matrix_product(M, v):
+    """ Multiply matrix M by vector v.
+    Return resulting vector: M * v. """
+    return Vector3([dot_product(Vector3(row), v) for row in M.m])
 
 
 def vector_from_two_eulers(rot, tilt):

@@ -14,7 +14,7 @@ If localized reconstruction is useful in your work, please cite:
 
 Ilca SL, Kotecha A, Sun X, Poranen MM, Stuart DI & Huiskonen JT (2015).
 Localized reconstruction of subunits from electron cryomicroscopy images of macromolecular complexes.
-Nat Commun 6, 8843. doi:10.1038/ncomms9843
+Nat Commun 6, 8843. [doi:10.1038/ncomms9843](http://dx.doi.org/10.1038/ncomms9843)
 
 ## Instructions
 

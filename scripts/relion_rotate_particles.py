@@ -2,8 +2,8 @@
 
 # **************************************************************************
 # *
-# * Author:  Juha T. Huiskonen (juha@strubi.ox.ac.uk)
-# *
+# * Authors:  Serban Ilca (serban@strubi.ox.ac.uk)
+# *           Juha T. Huiskonen (juha@strubi.ox.ac.uk)
 # * This program is free software; you can redistribute it and/or modify
 # * it under the terms of the GNU General Public License as published by
 # * the Free Software Foundation; either version 2 of the License, or
@@ -32,14 +32,14 @@ import argparse
 class CreateSymmetryRelatedParticles():
     def define_parser(self):
         self.parser = argparse.ArgumentParser(
-            description="Creates all symmetry copies for each particle as new lines in the input STAR file.")
+            description="Rotates all particles in the input STAR file.")
         required = self.parser.add_argument_group('required arguments')
         add = self.parser.add_argument  # shortcut
         addr = required.add_argument
 
         add('input_star', help="Input STAR filename with particles.")
-        add('--sym', default="C1", help="Symmetry of the particle.")
-        add('--random', action='store_true', default="False", help="Keep just one of the symmetry related views.")
+        add('--vector', default=None, help="Vector defining the additional rotation of the particles (x, y, z).")
+        add('--angles', default=[], help="Euler angles defining the additional rotation of the particles (rot, tilt, psi).")
         addr('--output', required=True, help="Output STAR filename.")
 
     def usage(self):
@@ -65,19 +65,54 @@ class CreateSymmetryRelatedParticles():
 
         self.validate(args)
 
-        print "Creating symmetry related particles..."
+        print "Creating rotated particles..."
 
         md = MetaData(args.input_star)
+
+        if args.vector and len(args.angles) != 0:
+            print "Please only provide a vector or a triplet of Euler angles for the particle rotation."
+            sys.exit(0)
+        elif args.vector:
+            vectors = load_vectors(None, args.vector, None, 1)
+            rot_matrix = vectors[0].matrix()
+        elif len(args.angles) != 0:
+            angles = args.angles.split(',')
+            if len(angles) != 3:
+                print "Please provide exactly 3 Euler angles for the particle rotation."
+                sys.exit(0)
+            else:
+                rot_rot = math.radians(float(angles[0]))
+                rot_tilt = math.radians(float(angles[1]))
+                rot_psi = math.radians(float(angles[2]))
+                rot_matrix = matrix_from_euler(rot_rot, rot_tilt, rot_psi)
+        else:
+            print "Please provide a vector or a triplet of Euler angles for the particle rotation."
+            sys.exit(0)
+
+        new_particles = []
         mdOut = MetaData()
         mdOut.addLabels(md.getLabels())
-        
-        new_particles = []
-
-        symmetry_matrices = matrix_from_symmetry(args.sym)
-
         for particle in md:
+            new_particle = particle.clone()
+            
             angles_to_radians(particle)
-            new_particles.extend(create_symmetry_related_particles(particle, symmetry_matrices, args.random))
+
+            rot = particle.rlnAngleRot
+            tilt = particle.rlnAngleTilt
+            psi = particle.rlnAnglePsi
+
+            matrix_particle = matrix_from_euler(rot, tilt, psi)
+
+            m = matrix_multiply(matrix_particle, matrix_transpose(rot_matrix))
+            rotNew, tiltNew, psiNew = euler_from_matrix(m)
+
+            new_particle.rlnAngleRot = rotNew
+            new_particle.rlnAngleTilt = tiltNew
+            new_particle.rlnAnglePsi = psiNew
+
+            angles_to_degrees(new_particle)
+            new_particles.append(new_particle)
+
         mdOut.addData(new_particles)
         mdOut.write(args.output)
 

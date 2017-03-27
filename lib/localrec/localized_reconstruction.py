@@ -139,9 +139,11 @@ def create_subparticles(particle, symmetry_matrices, subparticle_vector_list,
     angles_to_radians(particle)
 
     # Euler angles that take particle to the orientation of the model
-    rot = -particle.rlnAnglePsi
-    tilt = -particle.rlnAngleTilt
-    psi = -particle.rlnAngleRot
+
+    rot = particle.rlnAngleRot
+    tilt = particle.rlnAngleTilt
+    psi = particle.rlnAnglePsi
+
     matrix_particle = matrix_from_euler(rot, tilt, psi)
 
     subparticles = []
@@ -165,24 +167,24 @@ def create_subparticles(particle, symmetry_matrices, subparticle_vector_list,
 
             subpart = particle.clone()
 
-            m = matrix_multiply((matrix_multiply(matrix_from_subparticle_vector,
-                                                 symmetry_matrix)), matrix_particle)
+            m = matrix_multiply(matrix_particle, (matrix_multiply(matrix_transpose(symmetry_matrix), matrix_transpose(matrix_from_subparticle_vector))))
 
             if align_subparticles:
                 rotNew, tiltNew, psiNew = euler_from_matrix(m)
             else:
-                m2 = matrix_multiply(symmetry_matrix, matrix_particle)
+                m2 = matrix_multiply(matrix_particle, matrix_transpose(symmetry_matrix))
                 rotNew, tiltNew, psiNew = euler_from_matrix(m2)
 
             # save Euler angles that take the model to the orientation of the subparticle
-            subpart.rlnAngleRot = -psiNew
-            subpart.rlnAngleTilt = -tiltNew
-            subpart.rlnAnglePsi = -rotNew
+
+            subpart.rlnAngleRot = rotNew
+            subpart.rlnAngleTilt = tiltNew
+            subpart.rlnAnglePsi = psiNew
 
             # subparticle origin
             d = subparticle_vector.distance()
-            x = -m.m[2][0] * d + particle.rlnOriginX
-            y = -m.m[2][1] * d + particle.rlnOriginY
+            x = -m.m[0][2] * d + particle.rlnOriginX
+            y = -m.m[1][2] * d + particle.rlnOriginY
             z = -m.m[2][2] * d
 
             # modify the subparticle defocus paramaters by its z location
@@ -211,7 +213,7 @@ def create_subparticles(particle, symmetry_matrices, subparticle_vector_list,
                 subparticles_total += 1
 
     if subtract_masked_map:
-        subtracted = clone_subtracted_subparticles(subparticles)
+        subtracted = clone_subtracted_subparticles(subparticles, output)
 
     # To preserve numbering, ALL sub-particles are written to STAR files before filtering
     if do_create_star:
@@ -224,7 +226,7 @@ def create_subparticles(particle, symmetry_matrices, subparticle_vector_list,
         subparticles = filter_subparticles(subparticles, filters)
 
         if subtract_masked_map:
-            subtracted = clone_subtracted_subparticles(subparticles)
+            subtracted = clone_subtracted_subparticles(subparticles, output)
 
     return subparticles, subtracted
 
@@ -236,19 +238,21 @@ def create_symmetry_related_particles(particle, symmetry_matrices,
     particles. NOTE: Input particle should already contains angles in radians. """
     new_particles = []
 
-    rot = -particle.rlnAnglePsi
-    tilt = -particle.rlnAngleTilt
-    psi = -particle.rlnAngleRot
+    rot = particle.rlnAngleRot
+    tilt = particle.rlnAngleTilt
+    psi = particle.rlnAnglePsi
+
     matrix_particle = matrix_from_euler(rot, tilt, psi)
 
     for symmetry_matrix in symmetry_matrices:
-        m = matrix_multiply(symmetry_matrix, matrix_particle)
+        m = matrix_multiply(matrix_particle, matrix_transpose(symmetry_matrix))
         rotNew, tiltNew, psiNew = euler_from_matrix(m)
 
         new_particle = particle.clone()
-        new_particle.rlnAngleRot = -psiNew
-        new_particle.rlnAngleTilt = -tiltNew
-        new_particle.rlnAnglePsi = -rotNew
+
+        new_particle.rlnAngleRot = rotNew
+        new_particle.rlnAngleTilt = tiltNew
+        new_particle.rlnAnglePsi = psiNew
         angles_to_degrees(new_particle)
         new_particles.append(new_particle)
 
@@ -258,7 +262,7 @@ def create_symmetry_related_particles(particle, symmetry_matrices,
     return new_particles
 
 
-def clone_subtracted_subparticles(subparticles):
+def clone_subtracted_subparticles(subparticles, output):
     subparticles_subtracted = []
 
     for sp in subparticles:
@@ -270,8 +274,9 @@ def clone_subtracted_subparticles(subparticles):
     return subparticles_subtracted
 
 
-def add_suffix(filename):
-    return filename.replace('particles_', 'particles_subtracted_')
+def add_suffix(filename, output='particles'):
+    return filename.replace('%s_' % output,
+                            '%s_subtracted_' % output)
 
 
 def create_star(subparticles, star_filename):
@@ -359,7 +364,7 @@ def scipion_split_particle_stacks(inputStar, inputStack, output, filename_prefix
     md.addLabels('rlnOriginalName')
 
     # Initialize progress bar
-    progressbar = ProgressBar(width=70, percent=0.01, total=len(md))
+    progressbar = ProgressBar(width=60, total=len(md))
 
     for i, particle in enumerate(md, start=1):
         outputImageName = '%s/%s_%06d.mrc' % (output, filename_prefix, i)
@@ -414,7 +419,8 @@ def create_initial_stacks(input_star, angpix, masked_map, output):
 
 def extract_subparticles(subpart_size, np, masked_map, output, deleteParticles):
     """ Extract subparticles images from each particle
-    (Using 'relion_preprocess' as if the particle was a micrograph. """
+    (Using 'relion_preprocess' as if the particle was a micrograph.
+    Notice that this command line works only in Relion 1.4, not 2.0"""
 
     if np == 1:
         cmd = 'relion_preprocess '
@@ -494,12 +500,12 @@ def split_star_to_random_subsets(inputStarRoot):
     return half1StarRoot, half2StarRoot
 
 
-def reconstruct_subparticles(threads, output, maxres, sym):
+def reconstruct_subparticles(threads, output, maxres, sym, angpix):
     """ Reconstruct subparticles. Also create two half maps using random subsets. """
 
     def run_reconstruct(input, suffix='', extraArgs=''):
         cmd = ('relion_reconstruct ')
-        args = ('--sym %s --j %s %s --o %s%s.mrc --i %s.star') % (sym, threads, extraArgs, output, suffix, input)
+        args = ('--sym %s --j %s %s --o %s%s.mrc --i %s.star --angpix %s') % (sym, threads, extraArgs, output, suffix, input, angpix)
         run_command(cmd + args)
 
     for input in [output, output+'_subtracted']:
@@ -536,22 +542,27 @@ def run_command(command, output=""):
 
 
 class ProgressBar():
-    """ Implements a simple command line progress bar.
-    Still need fixing, now the shark swims too far..."""
+    """ Implements a simple command line progress bar
+    with a big fish catching a small fish.
+    Works nicely only if the number of iterations is larger than the width. """
 
-    def __init__(self, width, percent, total):
-        # setup toolbar
+    def __init__(self, width, total):
+        # hide cursor
+        sys.stdout.write("\033[?25l")
+        # setup progressbar
         self.width = width
-        sys.stdout.write("%s>->o" % ("_" * width))
+        sys.stdout.write("%s><^>" % ("~" * width))
         sys.stdout.flush()
-        sys.stdout.write("\b" * (width))
+        sys.stdout.write("\b" * width)
         self.count = 0  # total count
         self.c = 0  # progress count
-        self.percent = percent
-        self.timer = percent
+        self.n = 0 # total count
+        self.percent = 1.0/width
+        self.timer = self.percent
         self.total = total
 
     def notify(self):
+        self.n += 1
         if self.count == int(self.total * self.timer):
             sys.stdout.write("\b" * (self.c + 8))
             sys.stdout.write("~" * self.c)
@@ -559,5 +570,9 @@ class ProgressBar():
             sys.stdout.flush()
             self.timer += self.percent
             self.c += 1
+        if self.n == int(self.total):
+            # restore cursor
+            sys.stdout.write("\033[?25h")
+            sys.stdout.flush()
 
         self.count += 1

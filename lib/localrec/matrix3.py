@@ -24,8 +24,10 @@
 # **************************************************************************
 
 import os
-from math import * 
+import sys
+from math import *
 
+from pyworkflow.em import runProgram
 
 class Matrix3:
     """define Matrix3 class and method to obtain individual matrices from lists with 9 values"""
@@ -67,6 +69,15 @@ class Matrix3:
         print("%.6f\t"%(m[2][0])),
         print("%.6f\t"%(m[2][1])),
         print("%.6f\t"%(m[2][2]))
+
+
+def run_command(command, output=""):
+    if not output:
+        print "+++ " + command
+        sys.stdout.flush()
+        os.system(command)
+    else:
+        os.system(command + " > " + output)
 
 
 def matrix_from_euler(rot, tilt, psi):
@@ -145,10 +156,8 @@ def matrix_from_symmetry(symString):
 
 def relion_create_symmetry_ops_file(symString, filename):
     """ Create a symmetry operator file
-    by running relion_refine --print_symmetry_ops """
-    os.system("relion_refine --sym %s --print_symmetry_ops > %s"
-              % (symString, filename))
-
+    by running relion_refine --print_symmetry_ops."""
+    runProgram('relion_refine', '--sym %s --print_symmetry_ops --o ./ > %s' % (symString, filename))
 
 def matrix_from_symmetry_ops_file(filename):
     """ Obtain the lists with 9 values for the set_matrix method

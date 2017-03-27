@@ -2,7 +2,7 @@
 
 # **************************************************************************
 # *
-# * Authors:  Serban Ilca
+# * Authors:  Serban Ilca (serban@strubi.ox.ac.uk)
 # *           Juha T. Huiskonen (juha@strubi.ox.ac.uk)
 # *           J.M. de la Rosa Trevin
 # *
@@ -32,8 +32,10 @@ import sys
 from distutils import spawn
 import argparse
 
-from localrec import *
-from pyrelion import MetaData
+import localrec
+from pyworkflow.em import runProgram
+import pyworkflow.utils as pwutils
+
 
 class LocalizedReconstructionMask():
 
@@ -58,7 +60,10 @@ class LocalizedReconstructionMask():
         add('--cmm',
             help="A CMM file defining the location of the subparticle "
                  "(use instead of --vector). Coordinates in Angstrom."
-		 "Only one vector is supported.")
+                 "Only one vector is supported.")
+
+        add('--edge', type=int, default=3,
+            help="Mask edge in pixels. Default: 3 pixels.")
 
     def usage(self):
         self.parser.print_help()
@@ -69,52 +74,50 @@ class LocalizedReconstructionMask():
         print " "
         sys.exit(2)
 
-    def validate(self, args):
-        if not (spawn.find_executable("bimg")):
-            self.error("Error: Bsoft not found.",
-                       "Make sure Bsoft programs are in $PATH.")
-
     def main(self):
         self.define_parser()
         args = self.parser.parse_args()
 
         # Validate input arguments and required software (Bsoft)
-        self.validate(args)
+        # self.validate(args)
 
         # Load subparticle vectors either from Chimera CMM file or from
         # command line (command and semi-colon separated)
         # Distances can also be specified to modify vector lengths
-        subparticle_vector_list = load_vectors(args.cmm, args.vector,
-                                               args.length, args.angpix)
+        subparticle_vector_list = localrec.load_vectors(args.cmm, args.vector,
+                                                        args.length, args.angpix)
 
-        mask_x = subparticle_vector_list[0].x()*subparticle_vector_list[0].distance() + args.particle_size / 2
-        mask_y = subparticle_vector_list[0].y()*subparticle_vector_list[0].distance() + args.particle_size / 2
-        mask_z = subparticle_vector_list[0].z()*subparticle_vector_list[0].distance() + args.particle_size / 2
+        size = args.particle_size
+        half = size / 2
+        v = subparticle_vector_list[0]
+        d = v.distance()
 
-        print "Creating a mask at the end point of the vector..."
+        maskFn = 'mask.mrc'
+        v.scale(d)
+        phantomFn = 'phantom.descr'
+        phantomFile = open(phantomFn, 'w')
+        phantomFile.write("%d %d %d 1 1\n" % (size, size, size))
+        sym_matrices = localrec.matrix_from_symmetry(args.sym)
 
-        run_command("beditimg -create %s,%s,%s -sphere %s,%s,%s,%s -edge 3 -fill 1 mask.mrc"
-                    % (args.particle_size, args.particle_size, args.particle_size,
-                       mask_x, mask_y, mask_z, args.radius))
+        for m in sym_matrices:
+            vm = localrec.matrix_product(m, v)
+            sx, sy, sz = vm.data()
+            phantomFile.write("sph + -1 %d %d %d %d\n" % (sx, sy, sz, args.radius))
 
-	if args.sym:
-	        print "Symmetrizing the mask..."
-		run_command("bsym -origin %s,%s,%s -sym %s mask.mrc mask_%s.mrc" %
-			(int(args.particle_size/2), int(args.particle_size/2), int(args.particle_size/2),
-			args.sym, args.sym))
+        phantomFile.close()
 
-        print "Inverting the mask(s)..."
-	run_command("bar -multiply -1 -add 1 mask.mrc mask.mrc")
+        runProgram('xmipp_phantom_create', '%s -o %s' % (phantomFn, maskFn))
+        pwutils.cleanPath(phantomFn)
 
-	if args.sym:
-		run_command("bar -multiply -1 -add 1 mask_%s.mrc mask_%s.mrc" % (args.sym, args.sym))
+        runProgram('xmipp_transform_filter',
+                   '%s --fourier real_gaussian %d ' % (maskFn, args.edge))
 
-	print "All done!"
-	print " "
- 	print "Use the following command to apply the mask on your particle:"
-	print "bop -multiply 1,0 mask.mrc particle.mrc particle_masked.mrc"
-	print "The masked particle can be used for partial signal subtraction for localized reconstruction." 
-	print " "
+        print "All done!"
+        print " "
+        print "Apply the mask mask.mrc on your particle."
+        print "The masked particle can be used for partial signal subtraction for localized reconstruction."
+        print " "
+
 
 if __name__ == "__main__":    
     LocalizedReconstructionMask().main()
