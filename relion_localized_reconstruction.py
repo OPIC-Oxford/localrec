@@ -224,7 +224,8 @@ class LocalizedReconstruction():
                                                        args.align_subparticles,
                                                        args.masked_map,
                                                        True,
-                                                       filters)
+                                                       filters,
+                                                       args.angpix)
 
                 mdOut.addData(subparticles)
                 mdOutSub.addData(subtracted)

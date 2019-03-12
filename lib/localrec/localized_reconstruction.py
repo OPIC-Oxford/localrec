@@ -127,7 +127,7 @@ def angles_to_degrees(particle):
 def create_subparticles(particle, symmetry_matrices, subparticle_vector_list,
                         part_image_size, randomize, output,
                         unique, subparticles_total, align_subparticles,
-                        subtract_masked_map, do_create_star, filters):
+                        subtract_masked_map, do_create_star, filters, ang_pix):
     """ Obtain all subparticles from a given particle and set
     the properties of each such subparticle. """
 
@@ -189,8 +189,9 @@ def create_subparticles(particle, symmetry_matrices, subparticle_vector_list,
 
             # modify the subparticle defocus paramaters by its z location
             if hasattr(particle, 'rlnDefocusU'):
-                subpart.rlnDefocusU = particle.rlnDefocusU + z
-                subpart.rlnDefocusV = particle.rlnDefocusV + z
+                z_ang = ang_pix * z
+                subpart.rlnDefocusU = particle.rlnDefocusU + z_ang
+                subpart.rlnDefocusV = particle.rlnDefocusV + z_ang
 
             # save the subparticle coordinates (integer part) relative to the
             # user given image size and as a small shift in the origin (decimal part)
@@ -198,8 +199,8 @@ def create_subparticles(particle, symmetry_matrices, subparticle_vector_list,
             y_d, y_i = math.modf(y)
             subpart.rlnCoordinateX = int(part_image_size / 2) - x_i
             subpart.rlnCoordinateY = int(part_image_size / 2) - y_i
-            subpart.rlnOriginX = -x_d
-            subpart.rlnOriginY = -y_d
+            subpart.rlnOriginX = x_d
+            subpart.rlnOriginY = y_d
 
             overlaps = (unique >= 0 and
                         not filter_unique(subparticles, subpart, unique))
