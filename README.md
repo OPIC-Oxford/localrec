@@ -2,7 +2,7 @@
 
 Localized reconstruction of flexible subunits from macromolecular complexes.
 
-Version: 1.2.2
+Version: 1.2.1
 
 It also requires the following software:
 * Scipion 1.1 (or later - notice that a patch is required to use the current version in Scipion)
