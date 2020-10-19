@@ -1,4 +1,4 @@
-Note that this version of the software is now deprecated. The latest version of Localized Reconstrution is part of Scipion 2.0. The development version of the code is here: https://github.com/scipion-em/scipion-em-localrec
+Note that this version of the software is now deprecated. The latest version of Localized Reconstrution is part of Scipion 3.0. The development version of the code is here: https://github.com/scipion-em/scipion-em-localrec
 
 # Localized Reconstruction
 
